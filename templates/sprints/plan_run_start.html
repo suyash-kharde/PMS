@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load perms %}
+{% block title %}Generate sprint plan · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'sprints:sprint_list' %}?project={{ project.pk }}">Sprints</a> / Generate
+    </p>
+    <h1>✦ Generate the sprint plan from project data</h1>
+    <p class="muted">A deep-research pass reads this project's Build Plan, Development Instructions, Tech Stack and BRD, then builds sprints → requirements → acceptance criteria, field specs, unit test cases, risks, dependencies and external services — step by step.</p>
+  </div>
+</div>
+
+{% include "_project_tabs.html" %}
+
+{% if active_run %}
+  <div class="alert alert-info">A generation run is already
+    <strong>{{ active_run.get_status_display|lower }}</strong>.
+    <a href="{{ active_run.get_absolute_url }}">Open it →</a>
+  </div>
+{% endif %}
+
+<div class="grid-side">
+  <section class="card">
+    <header class="card-head"><h2>Sources detected</h2></header>
+    <dl class="kv kv-wide">
+      <dt>Build Plan</dt><dd>
+        {% if meta.build_plan.present %}
+          {{ meta.build_plan.chars }} chars{% if meta.build_plan.frozen %} · frozen{% endif %}
+          {% if meta.build_plan.origin != 'project' %} · <span class="err">not written — will use the BRD</span>{% endif %}
+        {% else %}<span class="err">missing — generate it first for best results</span>
+          <a class="btn btn-sm" href="{% url 'projects:doc_view' project.pk 'build_plan' %}">Build Plan doc →</a>
+        {% endif %}
+      </dd>
+      <dt>Dev Instructions</dt><dd>
+        {% if meta.dev_instructions.present %}{{ meta.dev_instructions.chars }} chars ·
+          {% if meta.dev_instructions.origin == 'project' %}project{% else %}org baseline{% endif %}
+        {% else %}<span class="err">missing</span>{% endif %}
+      </dd>
+      <dt>Tech Stack</dt><dd>
+        {% if meta.tech_stack.present %}{{ meta.tech_stack.chars }} chars ·
+          {% if meta.tech_stack.origin == 'project' %}project{% else %}org baseline{% endif %}
+        {% else %}<span class="err">missing</span>{% endif %}
+      </dd>
+      <dt>BRD</dt><dd>
+        {% if meta.brd.present %}v{{ meta.brd.version }} · {{ meta.brd.chars }} chars{% if meta.brd.frozen %} · frozen{% endif %}
+        {% else %}<span class="err">none — will use timeline + tickets</span>{% endif %}
+      </dd>
+      <dt>Timeline</dt><dd>{{ meta.timeline_entries }} note(s) / decision(s)</dd>
+      <dt>Open tickets</dt><dd>{{ meta.tickets }} feature / change request(s)</dd>
+    </dl>
+    <p class="muted small">Will generate from: {{ quality }}.</p>
+  </section>
+
+  <section class="card">
+    <header class="card-head"><h2>Options</h2></header>
+    <form method="post" class="form-grid">
+      {% csrf_token %}
+      <label class="field">
+        <span>Sprint length (weeks)</span>
+        <input type="number" name="sprint_weeks" value="2" min="1" max="8">
+      </label>
+      <label class="field">
+        <span>Target sprint count (optional)</span>
+        <input type="number" name="target_sprints" min="1" max="6" placeholder="model decides">
+      </label>
+      <div class="form-actions span-2">
+        <button class="btn btn-primary" type="submit" {% if active_run %}disabled{% endif %}>✦ Start generation</button>
+        <a class="btn btn-ghost" href="{% url 'sprints:sprint_list' %}?project={{ project.pk }}">Cancel</a>
+      </div>
+    </form>
+    <p class="muted small">Runs in the background (a few minutes). You can leave this page — progress is saved.</p>
+  </section>
+</div>
+
+{% if recent_runs %}
+  <section class="card">
+    <header class="card-head"><h2>Recent generations</h2></header>
+    <ul class="list">
+      {% for r in recent_runs %}
+        <li class="list-row">
+          <span class="badge status-{{ r.status }}">{{ r.get_status_display }}</span>
+          <a class="grow" href="{{ r.get_absolute_url }}">Run #{{ r.pk }} · {{ r.created_at|date:"d M Y H:i" }}</a>
+          <span class="muted small">{{ r.summary|truncatechars:70 }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+{% endblock %}

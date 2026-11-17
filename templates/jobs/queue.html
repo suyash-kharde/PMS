@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}AI queue · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>AI queue</h1>
+    <p class="muted">Slow work — BRD updates, recordings, Build Plans, sprint plans, design workspaces — waits here and runs in order.
+      Lanes run side by side: {% for name, n in lanes.items %}<strong>{{ name }}</strong> {{ n }} at a time{% if not forloop.last %} · {% endif %}{% endfor %}.
+      One AI job per project runs at a time. You get a notification when yours is done.</p></div>
+</div>
+
+<section class="card table-wrap">
+  <header class="card-head" style="padding:12px 12px 0"><h2>Running now</h2></header>
+  {% include "jobs/_table.html" with rows=running empty="Nothing running." %}
+</section>
+<section class="card table-wrap">
+  <header class="card-head" style="padding:12px 12px 0"><h2>Waiting</h2></header>
+  {% include "jobs/_table.html" with rows=waiting empty="Nothing waiting." %}
+</section>
+<section class="card table-wrap">
+  <header class="card-head" style="padding:12px 12px 0"><h2>Finished in the last 2 days</h2></header>
+  {% include "jobs/_table.html" with rows=recent empty="Nothing yet." %}
+</section>
+{% endblock %}

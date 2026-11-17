@@ -1,0 +1,12 @@
+{% if form.non_field_errors %}<div class="alert alert-error span-2">{{ form.non_field_errors }}</div>{% endif %}
+{% for field in form %}
+  {% if field.is_hidden %}{{ field }}
+  {% else %}
+    <label class="field {% if field.name in wide_fields %}span-2{% endif %}">
+      <span>{{ field.label }}{% if field.field.required %} *{% endif %}</span>
+      {{ field }}
+      {% if field.help_text %}<em class="muted small">{{ field.help_text }}</em>{% endif %}
+      {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+    </label>
+  {% endif %}
+{% endfor %}

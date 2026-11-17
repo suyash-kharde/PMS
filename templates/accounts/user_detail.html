@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load perms people %}
+{% block title %}{{ person.display_name }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="person-head">
+    <span class="avatar avatar-xl" style="--c:{{ person.role.color|default:person.color }}">{{ person.initials }}</span>
+    <div>
+      <h1>{{ person.display_name }}</h1>
+      <p class="muted">{{ person.title|default:"—" }} · {{ person.email }}
+        {% if person.role %}<span class="chip" style="--c:{{ person.role.color }}">{{ person.role.name }}</span>{% endif %}
+        {% if person.team %}<span class="chip" style="--c:{{ person.team.color }}">{{ person.team.name }}</span>{% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="row-actions">
+    {% if user|can:"role.manage" %}<a class="btn btn-ghost" href="{% url 'audit:user_activity' person.pk %}">Activity Logs</a>{% endif %}
+    {% if user|can:"role.manage" %}<a class="btn btn-ghost" href="{% url 'accounts:user_permissions' person.pk %}">Permissions</a>{% endif %}
+    {% if can_edit %}
+    <a class="btn" href="{% url 'accounts:user_edit' person.pk %}">Edit</a>
+    <form method="post" action="{% url 'accounts:user_toggle' person.pk %}">{% csrf_token %}
+      <button class="btn btn-ghost" type="submit">{% if person.is_active %}Deactivate{% else %}Activate{% endif %}</button></form>
+    {% endif %}
+    {% if user|can:"user.delete" and person.pk != user.pk %}
+    <form method="post" action="{% url 'accounts:user_delete' person.pk %}"
+          data-confirm="Delete {{ person.display_name }}? This permanently removes their account, comments and login — it cannot be undone.">
+      {% csrf_token %}
+      <button class="btn btn-sm btn-delete" type="submit">🗑 Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-side">
+  <div class="stack">
+    <section class="card" id="work">
+      <header class="card-head">
+        <h2>Work on {% if work_is_today %}today{% else %}{{ work_day|date:"d M Y" }}{% endif %}</h2>
+        <form class="row-actions" method="get" action="#work">
+          <a class="btn btn-sm btn-ghost" href="?day={{ work_prev|date:'Y-m-d' }}#work" title="Previous day">‹</a>
+          <input type="date" name="day" value="{{ work_day|date:'Y-m-d' }}" max="{% now 'Y-m-d' %}" onchange="this.form.submit()">
+          {% if work_next %}<a class="btn btn-sm btn-ghost" href="?day={{ work_next|date:'Y-m-d' }}#work" title="Next day">›</a>{% endif %}
+        </form>
+      </header>
+      <p class="small"><span class="muted">Worked:</span> {{ work_seconds|hours_minutes }}
+        · <span class="muted">Actions:</span> <strong>{{ work_actions.total }}</strong></p>
+      {% if work_actions.kinds %}
+        <div class="tag-row action-kinds">
+          {% for k, n in work_actions.kinds.items %}<span class="chip">{{ k }} <strong>{{ n }}</strong></span>{% endfor %}
+        </div>
+      {% endif %}
+      {% for g in work_groups %}
+        <h3 class="sub">{% if g.project %}<a href="{{ g.project.get_absolute_url }}">{{ g.project.key }} – {{ g.project.name }}</a>{% else %}Other{% endif %}</h3>
+        <ul class="list">
+          {% for e in g.entries %}
+            <li class="list-row">
+              <span class="muted small">{{ e.when|time:"H:i" }}</span>
+              <span class="grow small">
+                <span class="muted">{{ e.kind }}</span>
+                {% if e.url %}<a href="{{ e.url }}">{{ e.text }}</a>{% else %}{{ e.text }}{% endif %}
+                {% if e.count > 1 %}<span class="muted">×{{ e.count }}</span>{% endif %}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% empty %}
+        <p class="empty">No work recorded on this day.</p>
+      {% endfor %}
+    </section>
+
+    <section class="card">
+      <header class="card-head"><h2>Reporting line</h2></header>
+      <div class="chain">
+        {% for m in chain reversed %}
+          <a class="chain-node" href="{% url 'accounts:user_detail' m.pk %}">
+            <span class="avatar avatar-sm" style="--c:{{ m.color }}">{{ m.initials }}</span>{{ m.display_name }}
+            <small class="muted">{{ m.role.name }}</small></a>
+          <span class="chain-arrow">▾</span>
+        {% endfor %}
+        <div class="chain-node current"><span class="avatar avatar-sm" style="--c:{{ person.color }}">{{ person.initials }}</span>{{ person.display_name }}</div>
+      </div>
+      {% if reports %}
+        <h3 class="sub">Direct reports</h3>
+        <div class="people-row">
+          {% for r in reports %}<a class="chip-person" href="{% url 'accounts:user_detail' r.pk %}">
+            <span class="avatar avatar-xs" style="--c:{{ r.color }}">{{ r.initials }}</span>{{ r.display_name }}</a>{% endfor %}
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <header class="card-head"><h2>Open tasks</h2></header>
+      <ul class="list">
+        {% for t in tasks %}<li class="list-row"><span class="prio prio-{{ t.priority }}"></span>
+          <a class="grow" href="{{ t.get_absolute_url }}">{{ t.title }}</a>
+          <span class="muted small">{{ t.project.key }}</span></li>
+        {% empty %}<li class="empty">No open tasks.</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card">
+      <header class="card-head"><h2>Effective capabilities</h2></header>
+      <p class="muted small">Resolved from the role tree plus personal overrides.</p>
+      <ul class="cap-list">
+        {% for code, scope in caps %}<li><code>{{ code }}</code><span class="scope scope-{{ scope }}">{{ scope }}</span></li>
+        {% empty %}<li class="empty">No capabilities.</li>{% endfor %}
+      </ul>
+      {% if user|can:"role.manage" %}
+        <p class="small" style="margin:.6rem 0 0">{% if overrides %}{{ overrides|length }} personal permission{{ overrides|length|pluralize }} set. {% endif %}<a href="{% url 'accounts:user_permissions' person.pk %}">Manage this person's permissions →</a></p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <header class="card-head"><h2>Projects</h2></header>
+      <ul class="list">
+        {% for p in projects %}<li class="list-row"><span class="dot" style="--c:{{ p.color }}"></span><a class="grow" href="{{ p.get_absolute_url }}">{{ p.key }}</a></li>
+        {% empty %}<li class="empty">None.</li>{% endfor %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}VMs · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>VMs</h1></div></div>
+<form class="filters card" method="get" role="search">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search by VM name, host / IP, OS, username or project" aria-label="Search VMs" autofocus>
+  <select name="os" aria-label="Operating system" onchange="this.form.submit()"><option value="">Any OS</option>
+    {% for o in os_choices %}<option value="{{ o }}"{% if os_filter == o %} selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+  <select name="project" aria-label="Project" onchange="this.form.submit()"><option value="">Any project</option>
+    {% for p in project_choices %}<option value="{{ p.pk }}"{% if project_filter == p.pk|stringformat:"s" %} selected{% endif %}>{{ p.key }} – {{ p.name }}</option>{% endfor %}</select>
+  <select name="use" aria-label="Usage" onchange="this.form.submit()">
+    <option value="">In use or not</option>
+    <option value="used"{% if use == "used" %} selected{% endif %}>In use (has projects)</option>
+    <option value="unused"{% if use == "unused" %} selected{% endif %}>Not used (no projects)</option></select>
+  <select name="sort" aria-label="Sort" onchange="this.form.submit()">
+    {% for value, label in sort_choices %}<option value="{{ value }}"{% if sort == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="btn" type="submit">Search</button>
+  {% if filtered %}<a class="btn btn-ghost" href="{% url 'vms:vm_list' %}">Clear</a>{% endif %}
+  <span class="muted small">{% if filtered %}{{ rows|length }} of {{ total }} VM{{ total|pluralize }} match{% else %}{{ total }} VM{{ total|pluralize }}{% endif %}</span>
+</form>
+<div class="grid-side">
+  <section class="card table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Host</th><th>OS</th><th>Projects</th><th></th><th></th></tr></thead>
+      <tbody>
+        {% for vm, edit_form in rows %}
+          <tr><td>{{ vm.name }}</td><td>{{ vm.host }}</td><td>{{ vm.os|default:"—" }}</td>
+            <td>
+              {% if vm.n %}
+                <a class="btn btn-ghost btn-sm" href="{% url 'vms:vm_projects' vm.pk %}">{{ vm.n }} project{{ vm.n|pluralize }}</a>
+              {% else %}
+                0
+              {% endif %}
+            </td>
+            <td>
+              <details>
+                <summary class="btn btn-ghost btn-sm">✎ Edit</summary>
+                <form method="post" action="{% url 'vms:vm_save' vm.pk %}" class="stack-sm" style="padding:.5rem 0">{% csrf_token %}
+                  {% for field in edit_form %}<label class="field"><span>{{ field.label }}</span>{{ field }}
+                    {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+                    {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}</label>{% endfor %}
+                  <button class="btn btn-primary" type="submit">Save</button>
+                </form>
+              </details>
+            </td>
+            <td><form method="post" action="{% url 'vms:vm_delete' vm.pk %}" data-confirm="Remove {{ vm.name }} from the registry?">{% csrf_token %}
+              <button class="icon-btn" type="submit">✕</button></form></td></tr>
+        {% empty %}<tr><td colspan="6" class="empty">{% if filtered %}No VM matches{% if q %} “{{ q }}”{% endif %}. <a href="{% url 'vms:vm_list' %}">Show all VMs</a>{% else %}No VMs registered yet.{% endif %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <aside class="card">
+    <header class="card-head"><h2>New VM</h2></header>
+    <form method="post" action="{% url 'vms:vm_create' %}" class="stack-sm">{% csrf_token %}
+      {% for field in form %}<label class="field"><span>{{ field.label }}</span>{{ field }}
+        {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}</label>{% endfor %}
+      <button class="btn btn-primary" type="submit">Add VM</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load perms %}
+{% block title %}Unit test cases{% if project %} · {{ project.key }}{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    {% if project %}<p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Test cases</p>{% endif %}
+    <h1>Unit test cases{% if project %} · {{ project.name }}{% endif %}</h1>
+    <p class="muted">{{ test_cases|length }} shown</p>
+  </div>
+</div>
+
+{% if project %}{% include "_project_tabs.html" %}{% endif %}
+
+<form class="filters card" method="get">
+  {% if not project %}
+    <select name="project" onchange="location.href='/projects/'+this.value+'/testcases/'">
+      <option value="">All projects</option>
+      {% for p in projects %}<option value="{{ p.pk }}">{{ p.key }} · {{ p.name }}</option>{% endfor %}
+    </select>
+  {% endif %}
+  <select name="status">
+    <option value="">Any status</option>
+    {% for value, label in status_choices %}<option value="{{ value }}" {% if f_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="type">
+    <option value="">Any type</option>
+    {% for value, label in type_choices %}<option value="{{ value }}" {% if f_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Key</th><th>Title</th><th>Type</th><th>Requirement</th><th>Status</th><th>Developer</th><th>Executed</th></tr></thead>
+    <tbody>
+      {% for tc in test_cases %}
+        <tr>
+          <td><a href="{{ tc.get_absolute_url }}">{{ tc.key }}</a></td>
+          <td><a class="grow" href="{{ tc.get_absolute_url }}">{{ tc.title }}</a></td>
+          <td>{{ tc.get_test_type_display }}</td>
+          <td>{% if tc.requirement %}<a href="{{ tc.requirement.get_absolute_url }}">{{ tc.requirement.key }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td><span class="pill tc-status-{{ tc.status }}">{{ tc.get_status_display }}</span></td>
+          <td>{{ tc.developer.display_name|default:"—" }}</td>
+          <td class="muted small">{{ tc.executed_on|date:"d M Y"|default:"—" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="empty">No test cases match.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

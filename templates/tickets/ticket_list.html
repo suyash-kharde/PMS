@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load perms static %}
+{% block title %}Tickets{% if project %} · {{ project.key }}{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    {% if project %}<p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Tickets</p>{% endif %}
+    <h1>Tickets{% if project %} · {{ project.name }}{% endif %}</h1>
+  </div>
+  <div class="row-actions">
+    <div class="btn-group">
+      <a class="btn btn-sm {% if view_mode != 'board' %}btn-primary{% endif %}" href="{% querystring view='list' %}">List</a>
+      <a class="btn btn-sm {% if view_mode == 'board' %}btn-primary{% endif %}" href="{% querystring view='board' %}">Board</a>
+    </div>
+    {% if can_create %}
+      <a class="btn btn-primary" href="{% if project %}{% url 'tickets:create_for_project' project.pk %}{% else %}{% url 'tickets:create' %}{% endif %}">+ New ticket</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if project %}{% include "_project_tabs.html" %}{% endif %}
+
+{% include "tickets/_kpis.html" %}
+{% include "tickets/_filters.html" %}
+
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Key</th><th>Title</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Raised by</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for t in tickets %}
+        {% include "tickets/_ticket_row.html" with t=t hide_project=True hide_type=True %}
+      {% empty %}
+        <tr><td colspan="7" class="empty">No tickets match these filters.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/info-pop.js' %}"></script>{% endblock %}

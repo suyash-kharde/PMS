@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{% if u %}Edit update{% else %}New dev update{% endif %} · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'devlog:project_log' project.pk %}">Dev Log</a> /
+      {% if u %}Edit{% else %}New{% endif %}
+    </p>
+    <h1>{% if u %}Edit dev update{% else %}New dev update{% endif %}</h1>
+    <p class="muted">Record what was done, its status, and the milestone it moves toward.</p>
+  </div>
+</div>
+
+<form class="card form-grid" method="post">
+  {% csrf_token %}
+  {% include "sprints/_form_body.html" %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">{% if u %}Save{% else %}Add update{% endif %}</button>
+    <a class="btn btn-ghost" href="{% if u %}{{ u.get_absolute_url }}{% else %}{% url 'devlog:project_log' project.pk %}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

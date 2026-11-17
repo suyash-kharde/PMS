@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Bulk import · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Bulk import</h1><p class="muted">Download a template, fill it in, upload it — you'll get a chance to review before anything is saved.</p></div>
+</div>
+
+{% if can_combined %}
+<section class="card" style="border-color:var(--primary)">
+  <header class="card-head"><h2>All three at once</h2></header>
+  <p class="muted small">One workbook, one tab each for Customers, People and Projects. Rows can reference each other — e.g. a project can name a customer or a person defined earlier in the same file.</p>
+  <div class="row-actions">
+    <a class="btn" href="{% url 'bulk:template' 'combined' %}">⇩ Download combined template</a>
+  </div>
+  <form class="inline-form" method="post" action="{% url 'bulk:upload' 'combined' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="file" accept=".xlsx" required>
+    <button class="btn btn-primary" type="submit">Upload &amp; check</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="grid-2">
+  {% for k in kinds %}
+    {% if k.can %}
+      <section class="card">
+        <header class="card-head"><h2>{{ k.label }}</h2></header>
+        <p class="muted small">
+          {% if k.kind == 'customers' %}Add client organisations in bulk.
+          {% elif k.kind == 'projects' %}Add projects in bulk, optionally linked to an existing customer.
+          {% else %}Add people and their accounts in bulk, optionally linked to a customer for client-side users.
+          {% endif %}
+        </p>
+        <div class="row-actions">
+          <a class="btn" href="{% url 'bulk:template' k.kind %}">⇩ Download template</a>
+        </div>
+        <form class="inline-form" method="post" action="{% url 'bulk:upload' k.kind %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="file" name="file" accept=".xlsx" required>
+          <button class="btn btn-primary" type="submit">Upload &amp; check</button>
+        </form>
+      </section>
+    {% endif %}
+  {% endfor %}
+</div>
+
+{% if recent %}
+<section class="card">
+  <header class="card-head"><h2>Your recent imports</h2></header>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Kind</th><th>Status</th><th>Created</th><th>Skipped</th><th>Uploaded</th><th></th></tr></thead>
+      <tbody>
+        {% for b in recent %}
+          <tr>
+            <td>{{ b.get_kind_display }}</td>
+            <td><span class="badge {% if b.status == 'committed' %}badge-active{% else %}badge-planning{% endif %}">{{ b.get_status_display }}</span></td>
+            <td>{{ b.created_count }}</td>
+            <td>{{ b.skipped_count }}</td>
+            <td>{{ b.created_at|date:"d M, H:i" }}</td>
+            <td>
+              {% if b.status == 'pending' %}<a class="btn btn-sm" href="{% url 'bulk:review' b.pk %}">Review</a>
+              {% else %}<a class="btn btn-sm" href="{% url 'bulk:result' b.pk %}">View</a>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,15 @@
+<article class="task-card tkt-card" draggable="{{ can_triage|yesno:'true,false' }}" data-ticket="{{ t.pk }}">
+  <div class="task-top">
+    <span class="prio prio-{{ t.priority }}" title="{{ t.get_priority_display }}"></span>
+    <a href="{{ t.get_absolute_url }}" class="task-title">{{ t.title }}</a>
+  </div>
+  <div class="labels">
+    <span class="tkt-type tkt-type-{{ t.type }}">{{ t.get_type_display }}</span>
+    {% for l in t.labels.all %}<span class="chip" style="--c:{{ l.color }}">{{ l.name }}</span>{% endfor %}
+  </div>
+  <div class="task-meta">
+    <span class="muted small">{{ t.key }}</span>
+    {% if t.assignee %}<span class="avatar avatar-xs" style="--c:{{ t.assignee.color }}" title="{{ t.assignee.display_name }}">{{ t.assignee.initials }}</span>{% else %}<span class="avatar avatar-xs ghost">–</span>{% endif %}
+    {% if t.due_date %}<span class="muted small {% if t.is_open and t.due_date < today %}danger{% endif %}">{{ t.due_date|date:"d M" }}</span>{% endif %}
+  </div>
+</article>

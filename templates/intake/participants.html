@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load static perms %}
+{% block title %}People · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      {% if project.customer %}<a href="{{ project.customer.get_absolute_url }}">{{ project.customer.name }}</a> / {% endif %}
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / People</p>
+    <h1>People on this project</h1>
+    <p class="muted">Client side and our side, each with their role, responsibility and remarks. The BRD writer reads exactly this.</p>
+  </div>
+  {% if can_edit %}
+    <div class="row-actions">
+      <a class="btn" href="?add=existing#add">+ Add existing user</a>
+      {% if can_create_user %}<a class="btn btn-primary" href="?add=new#add">+ New person</a>{% endif %}
+    </div>
+  {% endif %}
+</div>
+
+{% include "_project_tabs.html" %}
+
+<div class="grid-2" id="participantSides" data-can-move="{% if can_edit %}1{% else %}0{% endif %}">
+  <section class="card">
+    <header class="card-head"><h2>Client side</h2><span class="chip" style="--c:#f59e0b"><span class="side-count">{{ client_side|length }}</span></span></header>
+    <div class="participant-zone" data-dropzone data-side="client">
+      {% for m in client_side %}{% include "intake/_participant.html" with m=m %}{% empty %}<p class="empty">Nobody from the client yet.</p>{% endfor %}
+    </div>
+  </section>
+  <section class="card">
+    <header class="card-head"><h2>Our organisation</h2><span class="chip" style="--c:#0ea5e9"><span class="side-count">{{ internal_side|length }}</span></span></header>
+    <div class="participant-zone" data-dropzone data-side="internal">
+      {% for m in internal_side %}{% include "intake/_participant.html" with m=m %}{% empty %}<p class="empty">Nobody assigned yet.</p>{% endfor %}
+    </div>
+  </section>
+</div>
+
+{% if can_edit %}
+<section class="card" id="add">
+  <header class="card-head"><h2>Add someone</h2></header>
+
+  <details class="adder" {% if open_form == 'existing' or not can_create_user %}open{% endif %}>
+    <summary>Add an existing user</summary>
+    {% if not form.fields.user.queryset.exists %}
+      <p class="muted small">Everyone with an account is already on this project.
+        {% if can_create_user %}Use <em>Create a new person</em> below.{% endif %}</p>
+    {% endif %}
+    <form class="form-grid" method="post" action="{% url 'intake:participant_create' project.pk %}">
+      {% csrf_token %}
+      {% for field in form %}
+        <label class="field {% if field.name in 'role_description,responsibility,remarks' %}span-2{% endif %}">
+          <span>{{ field.label }}</span>{{ field }}
+          {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+          {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+        </label>
+      {% endfor %}
+      <div class="form-actions span-2"><button class="btn btn-primary" type="submit">Add to project</button></div>
+    </form>
+  </details>
+
+  {% if can_create_user %}
+    <details class="adder" {% if open_form == 'new' %}open{% endif %}>
+      <summary>Create a new person and add them</summary>
+      <p class="muted small">Creates a login as well. Leave the password blank and one is generated for you.</p>
+      <form class="form-grid" method="post" action="{% url 'intake:participant_add_person' project.pk %}" autocomplete="off">
+        {% csrf_token %}
+        {% for field in new_person_form %}
+          <label class="field {% if field.name in 'role_description,responsibility,remarks' %}span-2{% endif %}">
+            <span>{{ field.label }}</span>{{ field }}
+            {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+            {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+          </label>
+        {% endfor %}
+        <div class="form-actions span-2"><button class="btn btn-primary" type="submit">Create and add</button></div>
+      </form>
+    </details>
+  {% endif %}
+</section>
+
+<section class="card">
+  <header class="card-head"><h2>Edit briefs</h2><span class="muted small">Open a person to change their role, responsibility or remarks</span></header>
+  {% for m, edit_form in rows %}
+    <details class="adder">
+      <summary>
+        <span class="avatar avatar-xs" style="--c:{{ m.user.color }}">{{ m.user.initials }}</span>
+        {{ m.user.display_name }}
+        <span class="chip" style="--c:{% if m.side == 'client' %}#f59e0b{% else %}#0ea5e9{% endif %}">{{ m.get_side_display }}</span>
+      </summary>
+      <form class="form-grid" method="post" action="{% url 'intake:participant_save' project.pk m.pk %}">
+        {% csrf_token %}
+        {% for field in edit_form %}
+          <label class="field {% if field.name in 'role_description,responsibility,remarks' %}span-2{% endif %}">
+            <span>{{ field.label }}</span>{{ field }}
+            {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+          </label>
+        {% endfor %}
+        <div class="form-actions span-2">
+          <button class="btn btn-primary" type="submit">Save</button>
+          <a class="btn btn-ghost" href="{% url 'accounts:user_detail' m.user.pk %}">Open profile</a>
+        </div>
+      </form>
+    </details>
+  {% empty %}<p class="empty">Nobody on this project yet.</p>{% endfor %}
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/participants.js' %}"></script>{% endblock %}

@@ -1,0 +1,15 @@
+<article class="task-card" draggable="true" data-task="{{ t.pk }}">
+  <div class="task-top">
+    <span class="prio prio-{{ t.priority }}" title="{{ t.get_priority_display }}"></span>
+    <a href="{{ t.get_absolute_url }}" class="task-title">{{ t.title }}</a>
+  </div>
+  {% if t.labels.all %}
+    <div class="labels">{% for l in t.labels.all %}<span class="chip" style="--c:{{ l.color }}">{{ l.name }}</span>{% endfor %}</div>
+  {% endif %}
+  <div class="task-meta">
+    {% if t.assignee %}<span class="avatar avatar-xs" style="--c:{{ t.assignee.color }}" title="{{ t.assignee.display_name }}">{{ t.assignee.initials }}</span>{% else %}<span class="avatar avatar-xs ghost">–</span>{% endif %}
+    {% if t.children.count %}<span class="muted small" title="Sub-tasks">⑃ {{ t.children.count }}</span>{% endif %}
+    {% if t.estimate_hours %}<span class="muted small">{{ t.estimate_hours|floatformat:0 }}h</span>{% endif %}
+    {% if t.due_date %}<span class="muted small {% if t.is_overdue %}danger{% endif %}">{{ t.due_date|date:"d M" }}</span>{% endif %}
+  </div>
+</article>

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load perms %}
+{% block title %}External services · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Services</p>
+    <h1>External / serviceable services · {{ project.name }}</h1>
+    <p class="muted">{{ services|length }} item(s) · {{ outstanding }} still outstanding</p>
+  </div>
+  <div class="row-actions">
+    {% if can_manage %}<a class="btn btn-primary" href="{% url 'sprints:service_create' project.pk %}">+ New service</a>{% endif %}
+  </div>
+</div>
+
+{% include "_project_tabs.html" %}
+
+<form class="filters card" method="get">
+  <select name="provided_by">
+    <option value="">Anyone provides</option>
+    {% for value, label in provider_choices %}<option value="{{ value }}" {% if f_provided_by == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="status">
+    <option value="">Any status</option>
+    {% for value, label in status_choices %}<option value="{{ value }}" {% if f_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Service</th><th>Category</th><th>Provided by</th><th>Status</th><th>Owner</th><th>Expected</th><th>Requirements</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+      {% for svc in services %}
+        <tr>
+          <td><strong>{{ svc.name }}</strong>{% if svc.description %}<br><span class="muted small">{{ svc.description }}</span>{% endif %}</td>
+          <td>{{ svc.get_category_display }}</td>
+          <td>{{ svc.get_provided_by_display }}</td>
+          <td><span class="pill svc-status-{{ svc.status }}">{{ svc.get_status_display }}</span></td>
+          <td>{% if svc.owner %}{{ svc.owner.display_name }}{% elif svc.owner_note %}{{ svc.owner_note }}{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="muted small {% if svc.is_overdue %}err{% endif %}">{{ svc.expected_date|date:"d M Y"|default:"—" }}</td>
+          <td class="muted small">{% for r in svc.requirements.all %}<a href="{{ r.get_absolute_url }}">{{ r.key }}</a> {% empty %}—{% endfor %}</td>
+          {% if can_manage %}<td class="nowrap">
+            <a class="linkbtn" href="{% url 'sprints:service_edit' svc.pk %}">edit</a>
+            <form method="post" action="{% url 'sprints:service_delete' svc.pk %}" data-confirm="Delete “{{ svc.name }}”?">{% csrf_token %}<button class="linkbtn" type="submit">×</button></form>
+          </td>{% endif %}
+        </tr>
+      {% empty %}
+        <tr><td colspan="{% if can_manage %}8{% else %}7{% endif %}" class="empty">No external services recorded for this project.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

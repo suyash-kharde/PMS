@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Edit {{ kind_label }} · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'projects:doc_view' project.pk kind %}">{{ kind_label }}</a> / Edit</p>
+    <h1>Edit {{ kind_label }}</h1>
+    <p class="muted">Written as Markdown.</p>
+  </div>
+</div>
+<form class="card" method="post">
+  {% csrf_token %}
+  <div class="field">
+    <span>Content</span>
+    <div data-md-editor>{{ form.content }}</div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-ghost" href="{% url 'projects:doc_view' project.pk kind %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/vendor/marked.min.js' %}"></script>
+<script src="{% static 'js/vendor/purify.min.js' %}"></script>
+<script src="{% static 'js/md_editor.js' %}"></script>
+{% endblock %}

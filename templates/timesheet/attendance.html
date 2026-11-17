@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Attendance · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="ts-hero ts-hero-slim">
+  <div>
+    <h1>Timesheet</h1>
+    <p class="muted">Attendance on {{ day|date:"l, j M Y" }}
+      {% if kind == "holiday" %}· <strong>{{ holiday_label }}</strong> (not checked){% elif kind == "weekend" %}· weekend (not checked){% elif holiday_label %}· <strong>{{ holiday_label }}</strong> (not checked for those teams){% endif %}</p>
+  </div>
+  <form class="ts-daynav" method="get">
+    <a class="ts-nav-btn" href="?date={{ prev|date:'Y-m-d' }}" aria-label="Previous day">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <label class="ts-daychip" title="Pick a date">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <span><strong>{{ day|date:"d - m - Y" }}</strong><small>{{ day|date:"l" }}</small></span>
+      <input type="date" name="date" value="{{ day|date:'Y-m-d' }}" onchange="this.form.submit()" onclick="this.showPicker&&this.showPicker()" aria-label="Date">
+    </label>
+    {% if next %}<a class="ts-nav-btn" href="?date={{ next|date:'Y-m-d' }}" aria-label="Next day">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></a>
+    {% else %}<span class="ts-nav-btn is-off" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>{% endif %}
+  </form>
+</div>
+{% include "timesheet/_tabs.html" %}
+
+<p style="text-align:right;margin:0 0 10px">
+  <a class="btn btn-sm" href="{% url 'timesheet:attendance_export' %}?from={{ day|date:'Y-m' }}-01&to={{ day|date:'Y-m-d' }}">⬇ Download Excel (attendance &amp; timesheet, {{ day|date:"F" }} so far)</a>
+</p>
+
+<form class="card ts-filters ts-filters-two" method="get" onsubmit="return false">
+  <label class="ts-filter-grow"><span>Search</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="search" id="ts-name" placeholder="Search a person…" autocomplete="off" aria-label="Search by name or username"></span></label>
+  <label><span>Status</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <select id="ts-status" aria-label="Filter by status"><option value="">All status</option>
+        <option value="present">Present</option><option value="absent">No login</option><option value="leave">On leave</option>
+        <option value="holiday">Holiday</option><option value="weekend">Weekend</option><option value="other">Not tracked</option></select></span></label>
+</form>
+
+<section class="card ts-att-card">
+  <div class="ts-scroll">
+    <table class="ts-attt">
+      <thead><tr><th class="ts-num">#</th><th>Person</th><th>Status</th><th>First login</th><th>Last logout</th><th>Override</th><th class="ts-kebab-col">Actions</th></tr></thead>
+      <tbody id="ts-list">
+        {% for r in rows %}
+          <tr data-name="{{ r.user.display_name|lower }} {{ r.user.username|lower }}" data-state="{{ r.state }}">
+            <td class="ts-num" data-n>{{ forloop.counter }}</td>
+            <td><span class="ts-person-cell">
+              <span class="ts-av" style="--c:{{ r.user.role.color|default:r.user.color }}">{{ r.user.initials }}</span>
+              <a href="{% url 'timesheet:week' %}?user={{ r.user.pk }}&week={{ day|date:'Y-m-d' }}">{{ r.user.display_name }}</a></span></td>
+            <td>
+              {% if r.state == "present" %}<span class="ts-st st-ok">Present</span>
+              {% elif r.state == "absent" %}<span class="ts-st st-bad">No login</span>
+              {% elif r.state == "holiday" %}<span class="ts-st st-hol">Holiday</span>
+              {% elif r.state == "leave" %}<span class="ts-st st-leave">Leave</span>
+              {% elif r.state == "weekend" %}<span class="ts-st">Weekend</span>
+              {% else %}<span class="ts-st">Not tracked</span>{% endif %}
+              {% if r.att.overridden %}
+                <small class="ts-ovr{% if r.state == 'absent' %} is-absent{% endif %}" title="{% if r.att.override_reason %}Reason: {{ r.att.override_reason }}{% else %}No reason given{% endif %}">
+                  {% if r.state == "leave" %}Marked on leave{% elif r.state == "absent" %}Marked no login{% else %}Marked present{% endif %} by <strong>{{ r.att.override_by.display_name|default:"someone (account removed)" }}</strong>{% if r.att.override_reason %} · “{{ r.att.override_reason|truncatechars:40 }}”{% endif %}</small>
+              {% elif r.state == "absent" %}
+                <small class="ts-ovr ts-ovr-auto" title="Nobody changed this: no login or Planwise use inside the working hours that day">automatic</small>
+              {% endif %}
+            </td>
+            <td>{% if r.first_login %}<strong>{{ r.first_login|time:"H:i" }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{% if r.att.last_logout %}<strong>{{ r.att.last_logout|time:"H:i" }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>
+              {% if r.can_override %}
+                <form method="post" class="ts-ovr-form">
+                  {% csrf_token %}<input type="hidden" name="user" value="{{ r.user.pk }}"><input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}">
+                  <span class="ts-sel {% if r.state == 'absent' %}is-absent{% endif %}">
+                    <select name="status" aria-label="Override status for {{ r.user.display_name }}" onchange="this.parentNode.classList.toggle('is-absent', this.value==='absent')">
+                      <option value="present">Present</option>
+                      <option value="absent" {% if r.state == "absent" %}selected{% endif %}>No login</option>
+                      <option value="leave" {% if r.state == "leave" %}selected{% endif %}>Leave</option>
+                    </select>
+                  </span>
+                  <input class="ts-reason" type="text" name="reason" placeholder="Reason (optional)" maxlength="240">
+                  <button class="btn btn-primary ts-set" type="submit">Set</button>
+                </form>
+              {% else %}<span class="muted small">—</span>{% endif %}
+            </td>
+            <td class="ts-kebab-col">
+              <details class="ts-kebab">
+                <summary aria-label="More actions for {{ r.user.display_name }}"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></summary>
+                <div class="ts-menu">
+                  <a href="{% url 'timesheet:week' %}?user={{ r.user.pk }}&week={{ day|date:'Y-m-d' }}">Open timesheet</a>
+                  <a href="{% url 'timesheet:calendar' %}?user={{ r.user.pk }}&month={{ day|date:'Y-m' }}">Open calendar</a>
+                  <a href="{% url 'accounts:user_detail' r.user.pk %}">View profile</a>
+                </div>
+              </details>
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="7" class="empty">No one in your team.</td></tr>{% endfor %}
+        <tr id="ts-none" hidden><td colspan="7" class="empty">No one matches that search.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<p class="muted small">Present = logged in (or used Planwise) any time that day before 18:30. On a working day, anyone who has not logged in yet shows as No login and gets no hours; they turn Present as soon as they log in. Weekends and holidays are not checked. Every override is recorded.</p>
+<script>
+document.addEventListener("click", function (e) {
+  document.querySelectorAll(".ts-kebab[open]").forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute("open"); });
+});
+</script>
+<script>
+(function () {
+  var box = document.getElementById("ts-name"), status = document.getElementById("ts-status");
+  var rows = document.querySelectorAll("#ts-list tr[data-name]"), none = document.getElementById("ts-none");
+  if (!box) return;
+  var KNOWN = ["present", "absent", "leave", "holiday", "weekend"], KEY = "ts-attendance-filter";
+  function kind(tr) { return KNOWN.indexOf(tr.dataset.state) === -1 ? "other" : tr.dataset.state; }
+  if (status) {  // show how many people are in each status, and drop the statuses nobody has on this day
+    var count = {};
+    rows.forEach(function (tr) { var k = kind(tr); count[k] = (count[k] || 0) + 1; });
+    Array.prototype.slice.call(status.options).forEach(function (o) {
+      if (!o.value) return;
+      if (count[o.value]) o.textContent += " (" + count[o.value] + ")"; else o.remove();
+    });
+  }
+  function apply() {
+    var q = box.value.trim().toLowerCase(), st = status ? status.value : "", n = 0;
+    rows.forEach(function (tr) {
+      var show = (!q || tr.dataset.name.indexOf(q) !== -1) && (!st || kind(tr) === st);
+      tr.hidden = !show;
+      if (show) { n += 1; tr.querySelector("[data-n]").textContent = n; }
+    });
+    none.hidden = n !== 0 || rows.length === 0;
+    try { sessionStorage.setItem(KEY, JSON.stringify({ q: box.value, st: st })); } catch (e) {}
+  }
+  box.addEventListener("input", apply);
+  if (status) status.addEventListener("change", apply);
+  // setting an override reloads the page; keep the search and status the person had chosen
+  try {
+    var saved = JSON.parse(sessionStorage.getItem(KEY) || "null");
+    if (saved) {
+      box.value = saved.q || "";
+      if (status && saved.st) status.value = saved.st;   // ignored by the browser if that status isn't on this day
+      apply();
+    }
+  } catch (e) {}
+})();
+</script>
+{% endblock %}

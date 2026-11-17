@@ -1,0 +1,238 @@
+{% load vms_extras %}
+{% project_vm_links project as vm_links %}
+<section class="card">
+  <header class="card-head"><h2>VMs</h2></header>
+  <ul class="list">
+    {% for link in vm_links %}
+      <li class="list-row-block">
+        <div class="list-row">
+          <span class="grow">
+            <strong>{{ link.vm.name }}</strong> <span class="muted small">{{ link.vm.host }}{% if link.vm.os %} · {{ link.vm.os }}{% endif %}</span>
+            <br><span class="muted small">Folder: {{ link.folder_path|default:"—" }}</span>
+          </span>
+          {% if can_edit %}
+            <form method="post" action="{% url 'vms:project_vm_remove' project.pk link.pk %}" data-confirm="Unassign {{ link.vm.name }} from {{ project.key }}? This does not delete anything on the VM itself.">{% csrf_token %}
+              <button class="icon-btn" type="submit" title="Remove">✕</button>
+            </form>
+          {% endif %}
+        </div>
+
+        {% if can_edit %}
+          <details>
+            <summary class="btn btn-ghost btn-sm">✎ Edit folder path</summary>
+            {% project_vm_edit_form link as edit_form %}
+            <form class="form-grid" method="post" action="{% url 'vms:project_vm_update' project.pk link.pk %}"
+                  style="padding:.5rem 0" data-vm-folder-preview data-preview-vm="{{ link.vm.pk }}"
+                  data-preview-url="{% url 'vms:project_vm_folder_preview' project.pk %}">{% csrf_token %}
+              {% for field in edit_form %}
+                {% if field.name != 'vm' %}
+                  <label class="field"><span>{{ field.label }}</span>{{ field }}
+                    {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}</label>
+                {% endif %}
+              {% endfor %}
+              <div class="form-actions span-2">
+                <button class="btn btn-ghost btn-sm" type="button" data-preview-btn>👁 Preview folder</button>
+                <button class="btn btn-primary" type="submit">Save</button>
+              </div>
+              <pre class="span-2" data-preview-result hidden
+                   style="margin:.4rem 0 0;max-height:220px;overflow:auto;padding:.5rem;background:var(--surface-2);
+                          border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.78rem"></pre>
+            </form>
+          </details>
+          <form method="post" action="{% url 'vms:project_vm_upload_code' project.pk link.pk %}"
+                enctype="multipart/form-data" data-vm-upload
+                style="margin-top:.5rem;display:flex;gap:.5rem;align-items:end;flex-wrap:wrap">{% csrf_token %}
+            <label class="field" style="flex:1 1 220px"><span>Destination subfolder (optional)</span>
+              <input type="text" name="dest_subfolder" placeholder="e.g. src/components — blank = folder root"></label>
+            <label class="field"><span>File(s)</span>
+              <input type="file" name="files" multiple data-upload-source></label>
+            <label class="field"><span>…or a whole folder</span>
+              <input type="file" name="files" webkitdirectory multiple data-upload-source></label>
+            <button class="btn btn-sm" type="submit">⇪ Upload</button>
+          </form>
+          <p class="muted small" style="margin:.3rem 0 0">Drops straight into the folder above (or the subfolder you name) — overwrites anything already there by the same name.</p>
+        {% endif %}
+
+        <div class="list-row-block" style="padding-left:0">
+          <h3 class="small muted" style="margin:.6rem 0 .2rem">Git</h3>
+          {% if link.git_repo_url %}
+            <span class="muted small">{{ link.git_repo_url }}</span>
+            <span class="badge">Branch: {{ link.git_branch|default:"main" }}</span>
+            {% git_version link as version %}
+            <span class="badge">{% if version %}Version: {{ version }}{% else %}No version tag published{% endif %}</span>
+            {% git_commits link as commits %}
+            {% if commits %}
+              <ul class="small muted" style="margin:.3rem 0 0;padding-left:1.1rem">
+                {% for c in commits %}<li>"{{ c.message }}" — {{ c.author }}, {{ c.date|date:"d M Y" }}</li>{% endfor %}
+              </ul>
+            {% endif %}
+          {% else %}
+            <span class="muted small">No repo configured yet.</span>
+          {% endif %}
+          {% if can_edit %}
+            <details>
+              <summary class="btn btn-ghost btn-sm">✎ Edit git details</summary>
+              {% project_vm_git_form link as git_form %}
+              <form class="form-grid" method="post" action="{% url 'vms:project_vm_git_save' project.pk link.pk %}" style="padding:.5rem 0">{% csrf_token %}
+                {% for field in git_form %}
+                  <label class="field"><span>{{ field.label }}</span>{{ field }}
+                    {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}</label>
+                {% endfor %}
+                <div class="form-actions span-2"><button class="btn btn-primary" type="submit">Save git details</button></div>
+              </form>
+            </details>
+            {% if link.git_repo_url %}
+              <form method="post" action="{% url 'vms:project_vm_git_pull' project.pk link.pk %}" data-loading="Pulling code…" style="margin-top:.4rem;display:inline-block">{% csrf_token %}
+                <button class="btn btn-sm" type="submit">⇩ Pull code</button>
+              </form>
+              <form method="post" action="{% url 'vms:project_vm_git_push' project.pk link.pk %}" data-loading="Pushing code…" style="margin-top:.4rem;display:flex;gap:.5rem;align-items:end;flex-wrap:wrap">{% csrf_token %}
+                <label class="field" style="flex:1 1 200px"><span>Commit message</span><input type="text" name="commit_message" placeholder="Update via Planwise" required></label>
+                <button class="btn btn-sm" type="submit">⇧ Push code</button>
+              </form>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        <div class="list-row-block" style="padding-left:0">
+          <h3 class="small muted" style="margin:.6rem 0 .2rem">Jenkins</h3>
+          {% if link.jenkins_url %}
+            <span class="muted small">{{ link.jenkins_url }}{% if link.jenkins_user %} · {{ link.jenkins_user }}{% endif %}</span>
+          {% else %}
+            <span class="muted small">Not configured.</span>
+          {% endif %}
+          {% if can_edit %}
+            <details>
+              <summary class="btn btn-ghost btn-sm">✎ Edit Jenkins details</summary>
+              {% project_vm_jenkins_form link as jenkins_form %}
+              <form class="form-grid" method="post" action="{% url 'vms:project_vm_jenkins_save' project.pk link.pk %}" style="padding:.5rem 0">{% csrf_token %}
+                {% for field in jenkins_form %}
+                  <label class="field"><span>{{ field.label }}</span>{{ field }}
+                    {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}</label>
+                {% endfor %}
+                <div class="form-actions span-2"><button class="btn btn-primary" type="submit">Save Jenkins details</button></div>
+              </form>
+            </details>
+          {% endif %}
+        </div>
+      </li>
+    {% empty %}<li class="empty">No VMs assigned to this project.</li>{% endfor %}
+  </ul>
+  {% if can_edit %}
+    <details>
+      <summary class="btn btn-primary btn-sm">+ Add VM</summary>
+      {% project_vm_add_form project as add_form %}
+      <form class="form-grid" method="post" action="{% url 'vms:project_vm_add' project.pk %}"
+            style="padding:.5rem 0" data-vm-folder-preview data-preview-url="{% url 'vms:project_vm_folder_preview' project.pk %}">{% csrf_token %}
+        {% for field in add_form %}
+          <label class="field"><span>{{ field.label }}</span>{{ field }}
+            {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}</label>
+        {% endfor %}
+        <div class="form-actions span-2">
+          <button class="btn btn-ghost btn-sm" type="button" data-preview-btn>👁 Preview folder</button>
+          <button class="btn btn-primary" type="submit">Assign VM</button>
+        </div>
+        <p class="muted small span-2" style="margin:.2rem 0 0">If the folder already exists on the VM (e.g. a
+          project that was there before it was added to Planwise), check "This folder already exists…" above —
+          preview it first to make sure the path is right.</p>
+        <pre class="span-2" data-preview-result hidden
+             style="margin:.4rem 0 0;max-height:220px;overflow:auto;padding:.5rem;background:var(--surface-2);
+                    border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.78rem"></pre>
+      </form>
+    </details>
+  {% endif %}
+</section>
+
+<script>
+  (function () {
+    // Uploads to the VM go through fetch(), not a plain form submit — a plain multipart
+    // submission doesn't reliably carry each file's folder-relative path (webkitRelativePath),
+    // so we build the FormData ourselves and send each file's path alongside it explicitly.
+    document.querySelectorAll("[data-vm-upload]").forEach(function (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var files = [];
+        form.querySelectorAll("[data-upload-source]").forEach(function (input) {
+          Array.from(input.files).forEach(function (f) { files.push(f); });
+        });
+        if (!files.length) {
+          window.PMS.toast("Choose at least one file or folder first.", "error");
+          return;
+        }
+
+        var body = new FormData();
+        body.append("csrfmiddlewaretoken", form.querySelector("[name=csrfmiddlewaretoken]").value);
+        body.append("dest_subfolder", form.querySelector("[name=dest_subfolder]").value);
+        files.forEach(function (f) {
+          body.append("files", f);
+          body.append("paths", f.webkitRelativePath || f.name);
+        });
+
+        var overlay = document.createElement("div");
+        overlay.className = "loading-overlay";
+        overlay.innerHTML =
+          '<div class="loading-box"><span class="spinner"></span><span>Uploading ' + files.length + " file(s)…</span></div>";
+        document.body.appendChild(overlay);
+
+        fetch(form.action, {
+          method: "POST",
+          headers: { "X-CSRFToken": window.PMS.csrf(), "X-Requested-With": "fetch" },
+          body: body,
+        })
+          .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+          .then(function (result) {
+            if (result.ok && result.data.ok) {
+              window.location.reload();
+            } else {
+              overlay.remove();
+              window.PMS.toast((result.data && result.data.error) || "Upload failed.", "error");
+            }
+          })
+          .catch(function (err) {
+            overlay.remove();
+            window.PMS.toast("Upload failed: " + err.message, "error");
+          });
+      });
+    });
+  })();
+
+  (function () {
+    // "Preview folder" — a read-only ls of a path on a VM before Add VM / Edit folder path is
+    // actually submitted, so pointing at an existing project's folder can be double-checked
+    // instead of found out about after the link is already saved.
+    document.querySelectorAll("[data-vm-folder-preview]").forEach(function (form) {
+      var btn = form.querySelector("[data-preview-btn]");
+      var box = form.querySelector("[data-preview-result]");
+      if (!btn || !box) return;
+      btn.addEventListener("click", function () {
+        var vmField = form.querySelector("[name=vm]");
+        var vmId = vmField ? vmField.value : form.dataset.previewVm;
+        var path = (form.querySelector("[name=folder_path]").value || "").trim();
+        box.hidden = false;
+        if (!vmId) {
+          box.textContent = "Pick a VM first.";
+          return;
+        }
+        if (!path) {
+          box.textContent = "Enter a folder path first.";
+          return;
+        }
+        box.textContent = "Looking…";
+        var body = new FormData();
+        body.append("vm", vmId);
+        body.append("path", path);
+        fetch(form.dataset.previewUrl, {
+          method: "POST",
+          headers: { "X-CSRFToken": window.PMS.csrf() },
+          body: body,
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            box.textContent = data.ok ? data.listing : "✕ " + data.error;
+          })
+          .catch(function (err) {
+            box.textContent = "✕ Preview failed: " + err.message;
+          });
+      });
+    });
+  })();
+</script>

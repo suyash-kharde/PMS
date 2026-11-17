@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Timesheet report · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Timesheet</h1><p class="muted">Weekly report · {{ r.monday|date:"d M" }} – {{ r.sunday|date:"d M Y" }}{% if is_lead_only %} · includes your projects as Project Lead{% endif %}</p></div>
+  <div class="row-actions">
+    <div class="segmented">
+      <a href="?week={{ prev|date:'Y-m-d' }}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if project_filter %}&project={{ project_filter }}{% endif %}">‹ Prev</a>
+      <a class="on">{{ r.monday|date:"d M" }}</a>
+      <a href="?week={{ next|date:'Y-m-d' }}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if project_filter %}&project={{ project_filter }}{% endif %}">Next ›</a>
+    </div>
+  </div>
+</div>
+{% include "timesheet/_tabs.html" %}
+
+<form class="filters card" method="get">
+  <input type="date" name="week" value="{{ r.monday|date:'Y-m-d' }}" aria-label="Week">
+  <select name="user"><option value="">All people</option>
+    {% for p in people %}<option value="{{ p.pk }}" {% if user_filter == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.display_name }}</option>{% endfor %}</select>
+  <select name="project"><option value="">All projects</option>
+    {% for p in projects %}<option value="{{ p.pk }}" {% if project_filter == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.key }} – {{ p.name }}</option>{% endfor %}</select>
+  <button class="btn" type="submit">Show</button>
+  <a class="btn btn-ghost" href="{% url 'timesheet:reports' %}">Reset</a>
+</form>
+
+<form class="filters card" method="get" action="{% url 'timesheet:attendance_export' %}" style="margin-top:12px">
+  <strong style="margin-right:6px">Attendance &amp; timesheet — Excel</strong>
+  <label class="muted small" for="dl-from">From</label>
+  <input type="date" id="dl-from" name="from" value="{{ dl_from|date:'Y-m-d' }}" max="{{ dl_to|date:'Y-m-d' }}" required>
+  <label class="muted small" for="dl-to">To</label>
+  <input type="date" id="dl-to" name="to" value="{{ dl_to|date:'Y-m-d' }}" max="{{ dl_to|date:'Y-m-d' }}" required>
+  <select name="user" aria-label="Person"><option value="">All people</option>
+    {% for p in people %}<option value="{{ p.pk }}">{{ p.display_name }}</option>{% endfor %}</select>
+  <button class="btn btn-primary" type="submit">⬇ Download Excel</button>
+  <span class="muted small">Per-day attendance, login times and hours filled — up to 93 days.</span>
+</form>
+
+<p class="muted small">
+  {% if r.weekends %}Weekends: {% for d in r.weekends %}{{ d|date:"D d M" }}{% if not forloop.last %}, {% endif %}{% endfor %}. {% endif %}
+  {% if r.holidays %}Holidays: {% for h in r.holidays %}{{ h.date|date:"D d M" }} {{ h.label }}{% if not forloop.last %}, {% endif %}{% endfor %}. {% endif %}
+  {% if r.spans_months %}This week spans two months: {% for m in r.months %}<strong>{{ m.label }} {{ m.total }} h</strong>{% if not forloop.last %} · {% endif %}{% endfor %}.{% endif %}
+</p>
+
+<section class="card table-wrap">
+  <header class="card-head" style="padding:12px 12px 0"><h2>Summary</h2></header>
+  <table class="table">
+    <thead><tr><th>Employee</th><th>Total hours</th><th>Absent days</th><th>Leave</th><th>Submitted</th>{% if r.spans_months %}{% for m in r.months %}<th>{{ m.label }}</th>{% endfor %}{% endif %}</tr></thead>
+    <tbody>
+      {% for s in r.summary %}
+        <tr>
+          <td>{{ s.user.display_name }}</td><td><strong>{{ s.total }}</strong></td>
+          <td>{% if s.limited %}<span class="muted small">n/a</span>{% else %}{% for d in s.absent %}<span class="badge badge-cancelled">{{ d|date:"D d M" }}</span> {% empty %}<span class="muted small">None</span>{% endfor %}{% endif %}</td>
+          <td>{% if s.limited %}<span class="muted small">n/a</span>{% else %}{% for d, h in s.leave %}<span class="badge ts-leave-badge">{{ d|date:"D d M" }} · {{ h }}h</span> {% empty %}<span class="muted small">None</span>{% endfor %}{% endif %}</td>
+          <td>{{ s.submitted }} of 7 days</td>
+          {% if r.spans_months %}{% for m in s.months %}<td>{{ m.total }}</td>{% endfor %}{% endif %}
+        </tr>
+      {% empty %}<tr><td colspan="7" class="empty">No one to show.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<p class="muted small">Reporting managers get this report for their team every Monday morning (previous Monday to Sunday).</p>
+{% endblock %}

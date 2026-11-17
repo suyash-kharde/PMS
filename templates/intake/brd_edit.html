@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Edit BRD · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'intake:brd' project.pk %}">BRD</a> / Edit</p>
+    <h1>Edit the BRD by hand</h1>
+    <p class="muted">Saving creates a new version — earlier revisions stay intact.</p>
+  </div>
+</div>
+<form class="card" method="post">
+  {% csrf_token %}
+  <label class="field"><span>Change summary</span>{{ form.summary }}</label>
+  <label class="field"><span>Markdown</span>{{ form.markdown }}</label>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Save as new version</button>
+    <a class="btn btn-ghost" href="{% url 'intake:brd' project.pk %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Review {{ label }} import · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'bulk:home' %}">Bulk import</a> / Review</p>
+    <h1>Review {{ label|lower }} import</h1>
+    <p class="muted">Nothing is saved yet. Rows with errors will be skipped; rows with only warnings will still be imported using the fallback shown.</p>
+  </div>
+</div>
+
+{% if result.file_error %}
+  <div class="alert alert-error">{{ result.file_error }}</div>
+  <a class="btn" href="{% url 'bulk:home' %}">Back</a>
+{% else %}
+  {% if result.missing_optional %}
+    <div class="alert alert-warning">Columns not found in this sheet, treated as blank: {{ result.missing_optional|join:", " }}</div>
+  {% endif %}
+
+  <div class="row-actions" style="margin-bottom:14px">
+    <span class="pill">{{ result.counts.total }} rows</span>
+    <span class="pill">{{ result.counts.create }} will be created</span>
+    {% if result.counts.warning %}<span class="pill" style="color:var(--warn)">{{ result.counts.warning }} with warnings</span>{% endif %}
+    {% if result.counts.error %}<span class="pill" style="color:var(--danger)">{{ result.counts.error }} will be skipped</span>{% endif %}
+  </div>
+
+  <div class="table-wrap card">
+    <table class="table">
+      <thead><tr><th>Row</th><th>Name</th><th>Status</th><th>Details</th></tr></thead>
+      <tbody>
+        {% for r in result.rows %}
+          <tr>
+            <td>{{ r.row }}</td>
+            <td>{{ r.label }}</td>
+            <td>
+              {% if not r.ok %}<span class="badge badge-cancelled">Skip — error</span>
+              {% elif r.warnings %}<span class="badge badge-on_hold">Import — warning</span>
+              {% else %}<span class="badge badge-active">Import</span>{% endif %}
+            </td>
+            <td>
+              {% for e in r.errors %}<div class="danger small">✕ {{ e }}</div>{% endfor %}
+              {% for w in r.warnings %}<div class="small" style="color:var(--warn)">⚠ {{ w }}</div>{% endfor %}
+              {% if not r.errors and not r.warnings %}<span class="muted small">Looks good</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="form-actions" style="margin-top:14px">
+    <form method="post" action="{% url 'bulk:confirm' batch.pk %}" data-confirm="Import {{ result.counts.create }} {{ label|lower }}? This can't be undone from here.">
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit" {% if not result.counts.create %}disabled{% endif %}>
+        ✓ Confirm &amp; save {{ result.counts.create }} {{ label|lower }}
+      </button>
+    </form>
+    <form method="post" action="{% url 'bulk:cancel' batch.pk %}">
+      {% csrf_token %}
+      <button class="btn btn-ghost" type="submit">Cancel import</button>
+    </form>
+    <a class="btn btn-ghost" href="{% url 'bulk:home' %}">Upload a different file</a>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{% if task %}Edit task{% else %}New task{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a></p>
+    <h1>{% if task %}Edit task{% else %}New task{% endif %}</h1>
+  </div>
+</div>
+<form class="card form-grid" method="post">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+  {% for field in form %}
+    {% if field.is_hidden %}{{ field }}{% else %}
+      <label class="field {% if field.name == 'description' or field.name == 'title' %}span-2{% endif %}">
+        <span>{{ field.label }}</span>{{ field }}
+        {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+      </label>
+    {% endif %}
+  {% endfor %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">Save task</button>
+    <a class="btn btn-ghost" href="{{ project.get_absolute_url }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

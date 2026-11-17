@@ -1,0 +1,8 @@
+{% for b in banners %}
+  <div class="job-banner is-{{ b.status }}" data-job-url="{% url 'jobs:api_job' b.id %}" role="status">
+    <span class="job-spin" aria-hidden="true"></span>
+    <strong>{{ b.label }}</strong>
+    <span data-job-text>{{ b.text }}</span>
+    <a class="job-link" href="{% url 'jobs:queue' %}">AI queue ›</a>
+  </div>
+{% endfor %}

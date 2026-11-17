@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ link.project.key }} on {{ link.vm.name }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'vms:vm_list' %}">VMs</a> / {{ link.vm.name }} / {{ link.project.key }}</p>
+    <h1>{{ link.project.key }} on {{ link.vm.name }}</h1>
+  </div>
+</div>
+
+<section class="card">
+  <header class="card-head"><h2>Info</h2></header>
+  <p><strong>Project:</strong> <a href="{{ link.project.get_absolute_url }}">{{ link.project.key }} · {{ link.project.name }}</a></p>
+  <p><strong>VM:</strong> {{ link.vm.name }} ({{ link.vm.host }}{% if link.vm.os %} · {{ link.vm.os }}{% endif %})</p>
+  <p><strong>Folder path:</strong> <code>{{ link.folder_path|default:"— not set —" }}</code></p>
+  {% if link.git_repo_url %}<p><strong>Git repo:</strong> {{ link.git_repo_url }} @ {{ link.git_branch|default:"main" }}</p>{% endif %}
+</section>
+
+<section class="card">
+  <header class="card-head"><h2>Folder contents on the VM</h2><span class="muted small">Live, read-only — <code>ls -la</code> only</span></header>
+  {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+  {% elif listing %}
+    <pre style="overflow-x:auto;background:var(--surface-2);padding:12px;border-radius:8px">{{ listing }}</pre>
+  {% else %}
+    <p class="empty">Nothing to show.</p>
+  {% endif %}
+</section>
+{% endblock %}

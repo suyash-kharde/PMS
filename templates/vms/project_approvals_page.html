@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Approvals · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Approvals</p>
+    <h1><span class="dot" style="--c:{{ project.color }}"></span> {{ project.name }} — Deployment approvals</h1>
+  </div>
+</div>
+
+{% include "vms/_project_approvals.html" %}
+{% endblock %}

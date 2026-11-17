@@ -1,0 +1,18 @@
+# Static hostname mapping for the orbitindia shared inference host, so containers
+# resolve the same otw-aiapp.orbitindia.in names the host has in /etc/hosts.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.gpu.yml -f docker-compose.hosts-override.yml up -d
+
+services:
+  web:
+    extra_hosts:
+      - "multimodel-asr.otw-aiapp.orbitindia.in:172.16.15.206"
+      - "multimodel-qwen36.otw-aiapp.orbitindia.in:172.16.15.206"
+      - "multimodel-embedding.otw-aiapp.orbitindia.in:172.16.15.206"
+      - "multimodel-reranker.otw-aiapp.orbitindia.in:172.16.15.206"
+  worker:
+    extra_hosts:
+      - "multimodel-asr.otw-aiapp.orbitindia.in:172.16.15.206"
+      - "multimodel-qwen36.otw-aiapp.orbitindia.in:172.16.15.206"
+      - "multimodel-embedding.otw-aiapp.orbitindia.in:172.16.15.206"
+      - "multimodel-reranker.otw-aiapp.orbitindia.in:172.16.15.206"

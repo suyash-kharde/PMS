@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ provider.name }} · AI models{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'aimodels:list' %}">AI models</a> / {{ provider.get_kind_display }}</p>
+    <h1>{{ provider.name }}
+      {% if provider.is_default %}<span class="chip" style="--c:#22c55e">in use</span>{% endif %}
+      {% if not provider.is_active %}<span class="chip">disabled</span>{% endif %}
+    </h1>
+    <p class="muted"><code>{{ provider.model_name|default:"—" }}</code> at <code>{{ provider.base_url }}</code></p>
+  </div>
+  <div class="row-actions">
+    <button class="btn" data-test="{% url 'aimodels:test' provider.pk %}" data-row="detail">Test connection</button>
+    {% if provider.kind == 'llm' %}
+      <button class="btn" data-test="{% url 'aimodels:test' provider.pk %}" data-row="detail" data-mode="generate">Test generation</button>
+    {% endif %}
+    <a class="btn" href="{% url 'aimodels:edit' provider.pk %}">Edit</a>
+    {% if not provider.is_default %}
+      <form method="post" action="{% url 'aimodels:make_default' provider.pk %}">{% csrf_token %}
+        <button class="btn btn-primary" type="submit">Use this one</button></form>
+    {% endif %}
+    <form method="post" action="{% url 'aimodels:delete' provider.pk %}" data-confirm="Delete {{ provider.name }}?">{% csrf_token %}
+      <button class="btn btn-danger" type="submit">Delete</button></form>
+  </div>
+</div>
+
+<div id="test-detail" class="test-result-box" hidden></div>
+
+<div class="grid-side">
+  <div class="stack">
+    <section class="card">
+      <header class="card-head"><h2>Connection</h2></header>
+      <dl class="kv">
+        <dt>Job</dt><dd>{{ provider.get_kind_display }}</dd>
+        <dt>Type</dt><dd>{{ provider.get_provider_type_display }}</dd>
+        <dt>Base URL</dt><dd><code>{{ provider.base_url }}</code></dd>
+        <dt>Model</dt><dd><code>{{ provider.model_name|default:"—" }}</code></dd>
+        <dt>API key</dt><dd><code>{{ provider.masked_key }}</code></dd>
+        <dt>Timeout</dt><dd>{{ provider.timeout }}s</dd>
+        {% if provider.kind == 'llm' %}
+          <dt>Max tokens</dt><dd>{{ provider.max_tokens }}</dd>
+          <dt>Temperature</dt><dd>{{ provider.temperature }}</dd>
+        {% endif %}
+        {% if provider.kind == 'asr' %}<dt>Language</dt><dd>{{ provider.language|default:"auto-detect" }}</dd>{% endif %}
+        {% if provider.extra %}<dt>Extra</dt><dd><code class="small">{{ provider.extra }}</code></dd>{% endif %}
+      </dl>
+    </section>
+
+    <section class="card">
+      <header class="card-head"><h2>Last check</h2></header>
+      {% if provider.last_checked_at %}
+        <p>
+          <span class="badge {% if provider.last_status == 'ok' %}badge-active{% else %}badge-cancelled{% endif %}">{{ provider.last_status }}</span>
+          <span class="muted small">{{ provider.last_checked_at|date:"d M Y, H:i" }} · {{ provider.last_latency_ms }}ms</span>
+        </p>
+        {% if provider.last_error %}<pre class="log">{{ provider.last_error }}</pre>{% endif %}
+        {% if provider.last_models_seen %}
+          <p class="muted small">Models served: {% for m in provider.last_models_seen %}<span class="chip">{{ m }}</span>{% endfor %}</p>
+        {% endif %}
+      {% else %}<p class="empty">Never tested.</p>{% endif %}
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card">
+      <header class="card-head"><h2>TLS</h2></header>
+      <dl class="kv">
+        <dt>Scheme</dt><dd>{% if provider.uses_tls %}HTTPS{% else %}plain HTTP{% endif %}</dd>
+        <dt>Verify</dt><dd>{{ provider.verify_ssl|yesno:"on,off" }}</dd>
+      </dl>
+      <h3 class="sub">CA certificate</h3>
+      {% if provider.ca_cert %}
+        <p class="small"><code>{{ provider.ca_cert.name|cut:"certs/" }}</code></p>
+        <form method="post" action="{% url 'aimodels:drop_cert' provider.pk 'ca_cert' %}" data-confirm="Remove the CA certificate?">{% csrf_token %}
+          <button class="btn btn-sm btn-ghost" type="submit">Remove</button></form>
+      {% else %}
+        <p class="muted small">None — the system CA store is used. Upload one on the edit page if this host uses a private authority.</p>
+      {% endif %}
+      <h3 class="sub">Client certificate (mTLS)</h3>
+      {% if provider.client_cert %}
+        <p class="small"><code>{{ provider.client_cert.name|cut:"certs/" }}</code>{% if provider.client_key %} + key{% endif %}</p>
+        <form method="post" action="{% url 'aimodels:drop_cert' provider.pk 'client_cert' %}" data-confirm="Remove the client certificate?">{% csrf_token %}
+          <button class="btn btn-sm btn-ghost" type="submit">Remove</button></form>
+      {% else %}<p class="muted small">Not used.</p>{% endif %}
+    </section>
+
+    <section class="card">
+      <header class="card-head"><h2>Resolved for this job</h2></header>
+      <p class="muted small">
+        <code>{{ active.model|default:"—" }}</code><br>
+        <code>{{ active.base_url }}</code><br>
+        source: <strong>{{ active.source }}</strong>
+      </p>
+      {% if provider.notes %}<h3 class="sub">Notes</h3><p class="small">{{ provider.notes|linebreaksbr }}</p>{% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/aimodels.js' %}"></script>{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{% if person %}Edit {{ person.username }}{% else %}New user{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<style>
+  .mfa-box{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:var(--surface-2,transparent)}
+  .mfa-box.is-on{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 6%,transparent)}
+  .mfa-switch{position:relative;display:flex;align-items:center;gap:14px;cursor:pointer;margin:0}
+  .mfa-switch input[type=checkbox]{position:absolute;opacity:0;width:1px;height:1px}
+  .mfa-slider{flex:0 0 auto;width:46px;height:26px;border-radius:999px;background:#cbd5e1;position:relative;transition:background .15s}
+  .mfa-slider::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
+  .mfa-switch input:checked + .mfa-slider{background:var(--primary,#4f46e5)}
+  .mfa-switch input:checked + .mfa-slider::after{transform:translateX(20px)}
+  .mfa-switch input:focus-visible + .mfa-slider{outline:2px solid var(--primary,#4f46e5);outline-offset:2px}
+  .mfa-text{display:flex;flex-direction:column;gap:2px}
+  .mfa-text strong{font-size:15px}
+  .mfa-text small{color:var(--muted);font-size:12.5px}
+  .mfa-note{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
+  .mfa-state{font-weight:600}.mfa-state.on{color:#15803d}.mfa-state.off{color:#b45309}
+</style>
+<div class="page-head"><h1>{% if person %}Edit {{ person.display_name }}{% else %}New user{% endif %}</h1></div>
+<form class="card form-grid" method="post">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+  {% for field in form %}{% if field.name != "mfa_required" %}
+    <label class="field {% if field.name in 'description,responsibility,remark' %}span-2{% endif %}">
+      <span>{{ field.label }}</span>{{ field }}
+      {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+      {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+    </label>
+  {% endif %}{% endfor %}
+  {% if form.mfa_required %}
+    <div class="span-2 mfa-box {% if form.mfa_required.value %}is-on{% endif %}">
+      <label class="mfa-switch" for="{{ form.mfa_required.id_for_label }}">
+        {{ form.mfa_required }}
+        <span class="mfa-slider" aria-hidden="true"></span>
+        <span class="mfa-text">
+          <strong>Require multi-factor authentication</strong>
+          <small>This person must enter a 6-digit code from an authenticator app (such as Microsoft Authenticator) every time they sign in.</small>
+        </span>
+      </label>
+      <p class="mfa-note">
+        {% if mfa_mode == "off" %}<span class="mfa-state off">Currently not enforced:</span> the Security page is set to <strong>Off</strong>, so this tick has no effect yet.
+        {% elif mfa_mode == "everyone" %}<span class="mfa-state on">Already required for everyone</span> by the Security page, whatever is ticked here.
+        {% else %}<span class="mfa-state on">Active:</span> the Security page is set to <strong>Only people I have ticked</strong>.{% endif %}
+        <a href="{% url 'accounts:security_settings' %}">Change on the Security page</a>
+      </p>
+    </div>
+  {% endif %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-ghost" href="{% url 'accounts:user_list' %}">Cancel</a>
+  </div>
+</form>
+{% if person and can_mfa %}
+<section class="card" style="padding:14px 16px;margin-top:14px;max-width:720px">
+  <h2 style="margin:0 0 6px;font-size:16px">Authenticator app</h2>
+  <p class="muted small" style="margin:0 0 10px">
+    {% if person.mfa_confirmed_at %}Set up on {{ person.mfa_confirmed_at|date:"d M Y" }}.{% else %}Not set up yet.{% endif %}
+    If this person lost their phone, reset it: they will scan a new QR code at their next sign-in.
+  </p>
+  <form method="post" action="{% url 'accounts:mfa_reset' person.pk %}" data-confirm="Reset the authenticator for {{ person.display_name }}?">
+    {% csrf_token %}
+    <button class="btn btn-sm btn-delete" type="submit" {% if not person.mfa_confirmed_at %}disabled{% endif %}>Reset authenticator</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

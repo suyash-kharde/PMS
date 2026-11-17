@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Design · {{ project.key }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Design</p>
+    <h1>Design workspace (Penpot)</h1>
+    <p class="muted">
+      This project has its own isolated Penpot account, team and design file. Claude Code
+      builds the UI here; anyone on the project can open it or follow a public view link.
+    </p>
+  </div>
+  {% if workspace and workspace.is_ready %}
+    <div class="row-actions">
+      <a class="btn btn-primary" href="{{ workspace.workspace_url }}" target="_blank" rel="noopener">Open in Penpot ↗</a>
+    </div>
+  {% endif %}
+</div>
+
+{% include "_project_tabs.html" %}
+
+{% if not penpot_enabled %}
+  <section class="card">
+    <p class="empty">
+      The Penpot integration is turned off. Set <code>PENPOT_ENABLED=1</code> and
+      <code>PENPOT_BASE_URL</code> in the environment, then restart, to use it.
+    </p>
+  </section>
+
+{% elif not workspace %}
+  <section class="card">
+    <header class="card-head"><h2>No design workspace yet</h2></header>
+    <p class="muted">Provision one now — it creates a dedicated Penpot account, team and starter file for {{ project.key }}.</p>
+    <form method="post" action="{% url 'penpot:provision' project.pk %}">
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit">Provision Penpot workspace</button>
+    </form>
+  </section>
+
+{% elif workspace.is_pending %}
+  <section class="card" data-poll>
+    <header class="card-head"><h2>Provisioning…</h2></header>
+    <p class="muted">{{ workspace.phase|default:"Queued — the background worker will pick this up." }}</p>
+    <p class="small muted">Status: <strong>{{ workspace.get_status_display }}</strong> · attempt {{ workspace.attempts }} · this page refreshes automatically.</p>
+    <form method="post" action="{% url 'penpot:provision' project.pk %}">
+      {% csrf_token %}
+      <button class="btn" type="submit">Run now</button>
+    </form>
+  </section>
+
+{% elif workspace.status == 'failed' %}
+  <section class="card" style="border-color:var(--danger,#ef4444)">
+    <header class="card-head"><h2>Provisioning failed</h2></header>
+    <p class="muted">{{ workspace.phase }}</p>
+    <pre class="mcp-cmd"><code>{{ workspace.last_error|truncatechars:800 }}</code></pre>
+    <form method="post" action="{% url 'penpot:provision' project.pk %}">
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit">Retry</button>
+    </form>
+  </section>
+
+{% elif workspace.status == 'disabled' %}
+  <section class="card">
+    <p class="empty">This workspace is disabled. Re-provision to start again.</p>
+    <form method="post" action="{% url 'penpot:provision' project.pk %}">{% csrf_token %}
+      <button class="btn btn-primary" type="submit">Re-provision</button>
+    </form>
+  </section>
+
+{% else %}
+  {# -------------------------------------------------- ready #}
+  <section class="card">
+    <header class="card-head">
+      <h2>See the design</h2>
+      <span class="badge badge-active">ready</span>
+    </header>
+    <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn btn-primary" href="{{ workspace.workspace_url }}" target="_blank" rel="noopener">Open in Penpot (edit) ↗</a>
+      <a class="btn" href="{{ workspace.viewer_url }}" target="_blank" rel="noopener">Open viewer ↗</a>
+      <a class="btn btn-ghost" href="{{ workspace.dashboard_url }}" target="_blank" rel="noopener">Team dashboard ↗</a>
+    </div>
+
+    <h3 style="margin-top:16px">Public view link</h3>
+    {% if workspace.share_url %}
+      <p class="muted small">Anyone with this link can view and inspect the design — no Penpot account needed.</p>
+      <div class="row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <code class="mcp-link" style="flex:1;min-width:280px;word-break:break-all;padding:8px 10px;background:var(--surface-2,#f1f5f9);border-radius:6px">{{ workspace.share_url }}</code>
+        <button class="btn" type="button" data-copy="{{ workspace.share_url }}">Copy</button>
+        <a class="btn btn-ghost" href="{{ workspace.share_url }}" target="_blank" rel="noopener">Open ↗</a>
+      </div>
+      <div style="margin-top:10px">
+        <form method="post" action="{% url 'penpot:share_revoke' project.pk %}" style="display:inline">
+          {% csrf_token %}<button class="btn btn-ghost btn-danger" type="submit">Revoke link</button>
+        </form>
+      </div>
+    {% else %}
+      <p class="muted small">Create a link stakeholders can open without logging in to Penpot.</p>
+      <form method="post" action="{% url 'penpot:share_create' project.pk %}">
+        {% csrf_token %}<button class="btn" type="submit">Create public view link</button>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <header class="card-head">
+      <h2>Design files</h2>
+      <form method="post" action="{% url 'penpot:sync' project.pk %}">{% csrf_token %}
+        <button class="btn btn-ghost" type="submit">Refresh</button>
+      </form>
+    </header>
+    {% if files %}
+      <table class="table">
+        <thead><tr><th>Name</th><th>Revision</th><th>Modified</th><th></th></tr></thead>
+        <tbody>
+          {% for f in files %}
+            <tr>
+              <td>{{ f.name }}{% if f.id == workspace.file_id %} <span class="badge">starter</span>{% endif %}</td>
+              <td class="small">{{ f.revn|default:"0" }}</td>
+              <td class="small">{{ f.modifiedAt|default:""|slice:":10" }}</td>
+              <td>
+                <a class="btn btn-ghost" href="{{ base_url }}/#/workspace/{{ workspace.penpot_project_id }}/{{ f.id }}" target="_blank" rel="noopener">Edit ↗</a>
+                <a class="btn btn-ghost" href="{{ base_url }}/#/view/{{ f.id }}" target="_blank" rel="noopener">View ↗</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">No files yet. Claude Code creates them in this Penpot project as it builds the UI.</p>
+    {% endif %}
+    <p class="small muted">Last synced {% if workspace.synced_at %}{{ workspace.synced_at|date:"d M Y, H:i" }}{% else %}never{% endif %}.</p>
+  </section>
+
+  <section class="card">
+    <header class="card-head"><h2>Team &amp; access</h2></header>
+    <dl class="kv">
+      <dt>Penpot team</dt><dd>{{ workspace.team_name|default:"—" }}</dd>
+      <dt>Bot account</dt><dd><code>{{ workspace.bot_email }}</code></dd>
+      <dt>Bot password</dt><dd><code data-copy="{{ workspace.bot_password }}">{{ workspace.masked_password }}</code> <button class="btn btn-ghost" type="button" data-copy="{{ workspace.bot_password }}">Copy</button></dd>
+      <dt>API access token</dt><dd><code data-copy="{{ workspace.access_token }}">{{ workspace.masked_token }}</code> {% if workspace.access_token %}<button class="btn btn-ghost" type="button" data-copy="{{ workspace.access_token }}">Copy</button>{% endif %}</dd>
+    </dl>
+    <p class="small muted">
+      Server-to-server calls from Planwise use the bot's session, not the token — if your Penpot
+      proxy strips the <code>Authorization</code> header, header-token auth will not work from outside.
+    </p>
+
+    <h3 style="margin-top:14px">Invite a project member</h3>
+    <form method="post" action="{% url 'penpot:invite_create' project.pk %}" class="form-grid">
+      {% csrf_token %}
+      <label class="field">
+        <span>Project member</span>
+        <select name="user">
+          <option value="">— pick someone —</option>
+          {% for m in invitable %}<option value="{{ m.pk }}">{{ m.display_name }} ({{ m.email }})</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field"><span>…or email</span><input type="email" name="email" placeholder="designer@client.com"></label>
+      <label class="field">
+        <span>Role</span>
+        <select name="role"><option value="editor">Editor</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select>
+      </label>
+      <div class="form-actions"><button class="btn btn-primary" type="submit">Send invite</button></div>
+    </form>
+    {% if invites %}
+      <table class="table" style="margin-top:10px">
+        <thead><tr><th>Email</th><th>Role</th><th>Invited</th><th>Accept link</th></tr></thead>
+        <tbody>
+          {% for i in invites %}
+            <tr>
+              <td>{{ i.email }}</td><td class="small">{{ i.role }}</td>
+              <td class="small">{{ i.created_at|date:"d M Y, H:i" }}</td>
+              <td>{% if i.accept_url %}<button class="btn btn-ghost" type="button" data-copy="{{ i.accept_url }}">Copy accept link</button>{% else %}<span class="muted small">emailed</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <header class="card-head"><h2>Connect Claude Code to this design</h2></header>
+    <p class="muted small">
+      Claude Code reads specs, tickets and the BRD from the Planwise MCP link (Claude Code tab)
+      and builds the UI through Penpot's MCP server. Both are shared services on this server —
+      nothing to install locally — but Penpot's MCP still drives a browser plugin, so a person
+      opens the design file and connects the plugin first.
+    </p>
+    {% if penpot_mcp_url %}
+    <ol class="list">
+      <li class="list-row"><span class="grow">Add both servers to your <code>.mcp.json</code> (below) and restart Claude Code.</span></li>
+      <li class="list-row"><span class="grow"><a href="{{ workspace.workspace_url }}" target="_blank" rel="noopener">Open the design file</a> in your browser → <strong>Plugins → Connect to MCP server</strong>.</span></li>
+      <li class="list-row"><span class="grow">In Claude Code, keep both connected — <code>planwise</code> for context, <code>penpot</code> for the canvas.</span></li>
+    </ol>
+    <p class="small" style="margin-top:8px">Example <code>.mcp.json</code>:</p>
+    <pre class="mcp-cmd"><code data-copy='{&#10;  "mcpServers": {&#10;    "planwise": { "type": "http", "url": "{{ mcp_endpoint }}/<claude-code-token>/" },&#10;    "penpot": { "type": "http", "url": "{{ penpot_mcp_url }}" }&#10;  }&#10;}'>{
+  "mcpServers": {
+    "planwise": { "type": "http", "url": "{{ mcp_endpoint }}/&lt;claude-code-token&gt;/" },
+    "penpot":   { "type": "http", "url": "{{ penpot_mcp_url }}" }
+  }
+}</code></pre>
+    {% else %}
+    <p class="small" style="margin-top:8px">
+      The shared Penpot MCP service is not published yet. Ask an administrator to expose it
+      (publish the <code>penpot-mcp</code> container's port and set <code>PENPOT_MCP_URL</code>),
+      then this section will show the exact <code>.mcp.json</code> to use.
+      The Planwise MCP link is available now on the <strong>Claude Code</strong> tab.
+    </p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <header class="card-head"><h2>Troubleshooting</h2></header>
+    <p class="muted small">
+      If "Open in Penpot" or the invites/share links stop working — usually because the
+      Penpot instance was reset or its objects were deleted — rebuild the workspace. This
+      registers a fresh bot account, team, project and starter&nbsp;file; anything already
+      in the old Penpot file is not carried over.
+    </p>
+    <form method="post" action="{% url 'penpot:rebuild' project.pk %}" data-confirm="Rebuild {{ project.key }}'s Penpot workspace from scratch? The current design file will be left behind.">
+      {% csrf_token %}
+      <div class="form-actions"><button class="btn" type="submit">Rebuild workspace</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <header class="card-head"><h2>Danger zone</h2></header>
+    <form method="post" action="{% url 'penpot:disable' project.pk %}" data-confirm="Disable the Penpot workspace for {{ project.key }}?">
+      {% csrf_token %}
+      <label class="field checkbox"><input type="checkbox" name="delete_remote"><span>Also delete the Penpot account, team and all its files (cannot be undone)</span></label>
+      <div class="form-actions"><button class="btn btn-danger" type="submit">Disable workspace</button></div>
+    </form>
+  </section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/penpot.js' %}"></script>
+{% endblock %}

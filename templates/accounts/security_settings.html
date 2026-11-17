@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Security · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Security</h1>
+    <p class="muted">Only roles that have the Security permission can see and change this page (set on the Roles page).</p>
+  </div>
+</div>
+
+<section class="card" style="padding:18px 20px;max-width:720px">
+  <h2 style="margin:0 0 4px">Auto sign-out</h2>
+  <p class="muted" style="margin:0 0 14px">
+    Someone is signed out when they have <strong>not used Planwise</strong> for this long. While they keep working
+    they stay signed in. It applies to everyone, from their next click.
+  </p>
+  <p style="font-size:18px;margin:0 0 16px">Right now: <strong>{{ current_text }}</strong> of inactivity</p>
+
+  <form method="post" class="filters" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+    {% csrf_token %}
+    <label class="field" style="margin:0"><span>Sign out after</span>
+      <input type="number" name="amount" min="1" step="any" required style="width:110px" placeholder="e.g. 5"></label>
+    <label class="field" style="margin:0"><span>&nbsp;</span>
+      <select name="unit"><option value="hours" selected>hours</option><option value="minutes">minutes</option><option value="days">days</option></select></label>
+    <button class="btn btn-primary" type="submit">Save</button>
+  </form>
+
+  <p class="muted small" style="margin:0 0 6px">Or pick a common time (saves straight away):</p>
+  <form method="post" style="display:flex;gap:6px;flex-wrap:wrap">
+    {% csrf_token %}
+    {% for seconds, label in presets %}
+      <button class="btn btn-sm {% if seconds == current %}btn-primary{% endif %}" type="submit" name="preset" value="{{ seconds }}">{{ label }}</button>
+    {% endfor %}
+  </form>
+  <p class="muted small" style="margin:14px 0 0">You can choose anything from {{ min_text }} to {{ max_text }}.</p>
+</section>
+
+<section class="card" style="padding:18px 20px;max-width:720px;margin-top:16px">
+  <h2 style="margin:0 0 4px">Multi-factor authentication (authenticator app)</h2>
+  <p class="muted" style="margin:0 0 12px">
+    People who need it sign in with their password and then a 6-digit code from an authenticator app such as
+    Microsoft Authenticator. The first time, they scan a QR code to set it up. To tick it for one person, open
+    their <strong>Edit</strong> page.
+  </p>
+  {% if mfa_forced_off %}<div class="alert alert-warning">MFA is switched off for everyone by a server setting (MFA_FORCE_OFF), whatever you choose below.</div>{% endif %}
+  <form method="post" style="display:flex;flex-direction:column;gap:8px">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="mfa">
+    <label><input type="radio" name="mode" value="off" {% if mfa_mode == "off" %}checked{% endif %}> <strong>Off</strong> for everyone</label>
+    <label><input type="radio" name="mode" value="selected" {% if mfa_mode == "selected" %}checked{% endif %}> <strong>Only people I have ticked</strong> on their Edit page ({{ mfa_ticked }} ticked)</label>
+    <label><input type="radio" name="mode" value="everyone" {% if mfa_mode == "everyone" %}checked{% endif %}> <strong>Everyone</strong> must use it</label>
+    <div><button class="btn btn-primary" type="submit">Save</button></div>
+  </form>
+  <p class="muted small" style="margin:12px 0 0">{{ mfa_set_up }} active people have set up an authenticator so far.
+    Anyone who needs it and has not set it up is asked to the next time they sign in; people already signed in are signed out first.</p>
+</section>
+{% endblock %}

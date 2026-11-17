@@ -1,0 +1,26 @@
+# secrets and local config
+.env
+.env.*
+!.env.example
+gateway/.env
+.env.prepared
+secrets/
+data/
+media/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+*.pem
+*.key
+
+# generated / bulky
+staticfiles/
+db_backups/
+*.zip
+*.dump
+*.sql
+*.sql.gz
+__pycache__/
+*.pyc
+*.log
+.venv/
+node_modules/

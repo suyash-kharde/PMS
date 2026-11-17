@@ -1,0 +1,59 @@
+{% load perms %}
+{# One tab bar for every project page. `tab` is set by each view. #}
+<nav class="tabs">
+  {% if not user.is_client_login %}
+  {% if user|can:"task.view" %}
+    <a class="{% if tab == 'board' %}on{% endif %}" href="{% url 'projects:detail' project.pk %}?tab=board">Board</a>
+    <a class="{% if tab == 'list' %}on{% endif %}" href="{% url 'projects:detail' project.pk %}?tab=list">List</a>
+    <a class="{% if tab == 'gantt' %}on{% endif %}" href="{% url 'projects:detail' project.pk %}?tab=gantt">Gantt</a>
+  {% endif %}
+  {% if user|can:"project.plan.view" %}
+    <a class="{% if tab == 'plan' %}on{% endif %}" href="{% url 'projects:detail' project.pk %}?tab=plan">Plan</a>
+  {% endif %}
+  {% if user|can:"timeline.view" %}
+    <a class="{% if tab == 'timeline' %}on{% endif %}" href="{% url 'intake:timeline' project.pk %}">Timeline</a>
+  {% endif %}
+  {% if user|can:"brd.view" %}
+    <a class="{% if tab == 'brd' %}on{% endif %}" href="{% url 'intake:brd' project.pk %}">BRD</a>
+  {% endif %}
+  {% if user|can:"participant.view" %}
+    <a class="{% if tab == 'people' %}on{% endif %}" href="{% url 'intake:participants' project.pk %}">People</a>
+  {% endif %}
+  {% if user|can:"ticket.view" %}
+    <a class="{% if tab == 'tickets' %}on{% endif %}" href="{% url 'tickets:list' %}?project={{ project.pk }}">Tickets</a>
+  {% endif %}
+  {% if user|can:"sprint.view" %}
+    <a class="{% if tab == 'sprints' %}on{% endif %}" href="{% url 'sprints:sprint_list' %}?project={{ project.pk }}">Sprints</a>
+    <a class="{% if tab == 'services' %}on{% endif %}" href="{% url 'sprints:service_list' project.pk %}">Services</a>
+  {% endif %}
+  {% if user|can:"techstack.view" %}
+    <a class="{% if tab == 'tech_stack' %}on{% endif %}" href="{% url 'projects:doc_view' project.pk 'tech_stack' %}">Tech Stack</a>
+  {% endif %}
+  {% if user|can:"devinstructions.view" %}
+    <a class="{% if tab == 'dev_instructions' %}on{% endif %}" href="{% url 'projects:doc_view' project.pk 'dev_instructions' %}">Dev Instructions</a>
+  {% endif %}
+  {% if user|can:"buildplan.view" %}
+    <a class="{% if tab == 'build_plan' %}on{% endif %}" href="{% url 'projects:doc_view' project.pk 'build_plan' %}">Build Plan</a>
+  {% endif %}
+  {% if user|can:"activity.view" %}
+    <a class="{% if tab == 'activity' %}on{% endif %}" href="{% url 'projects:detail' project.pk %}?tab=activity">Activity</a>
+  {% endif %}
+  {% if user|can:"chat.view" %}
+    <a class="{% if tab == 'chat' %}on{% endif %}" href="{% url 'rag:chat' project.pk %}">Ask AI</a>
+  {% endif %}
+  {% if user|can:"mcp.manage" %}
+    <a class="{% if tab == 'mcp' %}on{% endif %}" href="{% url 'mcp:manage' project.pk %}">Claude Code</a>
+  {% endif %}
+  {% if user|can:"penpot.manage" %}
+    <a class="{% if tab == 'design' %}on{% endif %}" href="{% url 'penpot:manage' project.pk %}">Design</a>
+  {% endif %}
+  {% if user|can:"devlog.view" %}
+    <a class="{% if tab == 'devlog' %}on{% endif %}" href="{% url 'devlog:project_log' project.pk %}">Dev Log</a>
+  {% endif %}
+  {% if user|can:"vm.manage" %}
+    <a class="{% if tab == 'vms' %}on{% endif %}" href="{% url 'vms:project_vms' project.pk %}">VMs</a>
+  {% endif %}
+  <a class="{% if tab == 'files' %}on{% endif %}" href="{% url 'projects:project_files' project.pk %}">Documents</a>
+  {% endif %}
+  <a class="{% if tab == 'links' %}on{% endif %}" href="{% url 'projects:project_links' project.pk %}">Project Links</a>
+</nav>

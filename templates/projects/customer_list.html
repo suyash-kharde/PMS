@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load perms %}
+{% block title %}Customers · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Customers</h1><p class="muted">{{ rows|length }} visible to you</p></div>
+  {% if can_manage %}<a class="btn btn-primary" href="{% url 'projects:customer_create' %}">+ New customer</a>{% endif %}
+</div>
+
+<form class="filters card" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Name, code, industry">
+  <span class="filters-sep"></span>
+  <select name="created" title="Newly added">
+    <option value="">Added: any time</option>
+    {% for value, label in created_presets %}<option value="{{ value }}" {% if created == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <label class="muted small" for="cust-date-from">From</label>
+  <input type="date" id="cust-date-from" name="date_from" value="{{ date_from }}">
+  <label class="muted small" for="cust-date-to">To</label>
+  <input type="date" id="cust-date-to" name="date_to" value="{{ date_to }}">
+  <button class="btn" type="submit">Search</button>
+  <a class="btn btn-ghost" href="{% url 'projects:customer_list' %}">Reset</a>
+</form>
+
+<div class="customer-grid">
+  {% for row in rows %}
+    <article class="card customer-card" style="--c:{{ row.customer.color }}">
+      <header class="customer-head">
+        <span class="customer-mark">{{ row.customer.initials }}</span>
+        <div class="grow">
+          <h3><a href="{{ row.customer.get_absolute_url }}">{{ row.customer.name }}</a></h3>
+          <p class="muted small">{{ row.customer.code }}{% if row.customer.industry %} · {{ row.customer.industry }}{% endif %}</p>
+        </div>
+      </header>
+      <div class="customer-stats">
+        <div><strong>{{ row.stats.projects }}</strong><span>projects</span></div>
+        <div><strong>{{ row.stats.active }}</strong><span>active</span></div>
+        <div><strong>{{ row.stats.progress }}%</strong><span>progress</span></div>
+        <div class="{% if row.stats.overdue %}danger{% endif %}"><strong>{{ row.stats.overdue }}</strong><span>overdue</span></div>
+      </div>
+      <ul class="list">
+        {% for p in row.projects %}
+          <li class="list-row"><span class="dot" style="--c:{{ p.color }}"></span>
+            <a class="grow" href="{{ p.get_absolute_url }}"><strong>{{ p.key }}</strong> {{ p.name }}</a>
+            <span class="badge badge-{{ p.status }}">{{ p.get_status_display }}</span></li>
+        {% empty %}<li class="empty">No projects yet.</li>{% endfor %}
+      </ul>
+    </article>
+  {% empty %}<p class="empty">No customers match.</p>{% endfor %}
+</div>
+
+{% if internal %}
+  <section class="card">
+    <header class="card-head"><h2>Projects without a customer</h2></header>
+    <ul class="list">
+      {% for p in internal %}
+        <li class="list-row"><span class="dot" style="--c:{{ p.color }}"></span>
+          <a class="grow" href="{{ p.get_absolute_url }}">{{ p.key }} · {{ p.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+{% endblock %}

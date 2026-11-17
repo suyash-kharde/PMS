@@ -1,0 +1,19 @@
+<article class="participant" {% if can_edit %}draggable="true" data-move-url="{% url 'intake:participant_move' project.pk m.pk %}"{% endif %}>
+  <header>
+    <span class="avatar" style="--c:{{ m.user.color }}">{{ m.user.initials }}</span>
+    <div class="grow">
+      <strong><a href="{% url 'accounts:user_detail' m.user.pk %}">{{ m.user.display_name }}</a></strong>
+      {% if m.is_primary_contact %}<span class="chip" style="--c:#22c55e">primary contact</span>{% endif %}
+      <div class="muted small">{{ m.position|default:"—" }}{% if m.role %} · {{ m.role.name }}{% endif %}</div>
+    </div>
+    {% if can_edit %}
+      <form method="post" action="{% url 'intake:participant_delete' project.pk m.pk %}" data-confirm="Remove {{ m.user.display_name }} from this project?">{% csrf_token %}
+        <button class="icon-btn" type="submit" title="Remove">✕</button></form>
+    {% endif %}
+  </header>
+  <dl class="kv">
+    <dt>Role</dt><dd>{{ m.role_description|default:"—" }}</dd>
+    <dt>Responsibility</dt><dd>{{ m.responsibility|default:"—" }}</dd>
+    <dt>Remarks</dt><dd>{{ m.remarks|default:"—" }}</dd>
+  </dl>
+</article>

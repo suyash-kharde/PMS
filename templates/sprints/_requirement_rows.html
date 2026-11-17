@@ -1,0 +1,18 @@
+<table class="table">
+  <thead><tr><th>Key</th><th>Requirement</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Criteria</th><th>Pts</th></tr></thead>
+  <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="{{ r.get_absolute_url }}">{{ r.key }}</a></td>
+        <td><a class="grow" href="{{ r.get_absolute_url }}">{{ r.title }}</a></td>
+        <td><span class="pill rq-status-{{ r.status }}">{{ r.get_status_display }}</span></td>
+        <td><span class="prio prio-{{ r.priority }}"></span> {{ r.get_priority_display }}</td>
+        <td>{% if r.assignee %}{{ r.assignee.display_name }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="muted small">{% with m=r.criteria_met %}{{ m.0 }}/{{ m.1 }}{% endwith %}</td>
+        <td>{{ r.estimate_points }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7" class="empty">Nothing here.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

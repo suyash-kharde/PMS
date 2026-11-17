@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{% if sprint %}Edit {{ sprint.key }}{% else %}New sprint{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'sprints:sprint_list' %}">Sprints</a>
+      {% if project %} / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a>{% endif %}
+    </p>
+    <h1>{% if sprint %}Edit {{ sprint.key }}{% else %}Plan a sprint{% endif %}</h1>
+  </div>
+</div>
+
+<form class="card form-grid" method="post">
+  {% csrf_token %}
+  {% if not sprint and not project %}
+    <label class="field span-2">
+      <span>Project *</span>
+      <select name="project" required>
+        <option value="">Select a project…</option>
+        {% for p in projects %}<option value="{{ p.pk }}">{{ p.key }} · {{ p.name }}</option>{% endfor %}
+      </select>
+    </label>
+  {% elif project %}
+    <input type="hidden" name="project" value="{{ project.pk }}">
+  {% endif %}
+  {% include "sprints/_form_body.html" %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">{% if sprint %}Save{% else %}Create sprint{% endif %}</button>
+    <a class="btn btn-ghost" href="{% if sprint %}{{ sprint.get_absolute_url }}{% else %}{% url 'sprints:sprint_list' %}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

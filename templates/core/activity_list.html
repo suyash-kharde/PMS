@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Recent activity · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'core:dashboard' %}">Dashboard</a> / Recent activity</p>
+    <h1>Recent activity</h1>
+    <p class="muted">Everything happening across projects you can see, most recent first.</p>
+  </div>
+</div>
+
+<form class="filters card" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search activity">
+  <select name="actor" data-search="1" data-keep-blank="1"><option value="">Anyone</option>
+    {% for person in actors %}<option value="{{ person.pk }}" {% if actor_id == person.pk|stringformat:"s" %}selected{% endif %}>{{ person.display_name }}</option>{% endfor %}
+  </select>
+  <select name="project"><option value="">Any project</option>
+    {% for p in projects %}<option value="{{ p.pk }}" {% if project_id == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.key }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+  <a class="btn btn-ghost" href="{% url 'core:activity_list' %}">Reset</a>
+</form>
+
+<section class="card">
+  <ul class="feed">
+    {% for a in activities %}
+      <li><span class="avatar avatar-sm" style="--c:{{ a.actor.color|default:'#64748b' }}">{{ a.actor.initials|default:"?" }}</span>
+        <div><strong>{{ a.actor.display_name|default:"System" }}</strong> {{ a.verb }}
+          {% if a.project %}<span class="muted small">· {{ a.project.key }}</span>{% endif %}
+          <br><small class="muted">{{ a.created_at|date:"d M Y, H:i" }}</small></div></li>
+    {% empty %}<li class="empty">No activity matches your filters.</li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}

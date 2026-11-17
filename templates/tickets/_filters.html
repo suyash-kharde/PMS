@@ -1,0 +1,41 @@
+{% comment %}Shared filter bar for the list and board views.{% endcomment %}
+<form class="filters card" method="get">
+  <input type="hidden" name="view" value="{{ view_mode }}">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search tickets…">
+  {% if not project %}
+    <select name="project" data-search="1" data-keep-blank="1" class="tkt-project-filter">
+      <option value="">All projects</option>
+      {% for p in projects %}<option value="{{ p.pk }}" {% if f_project == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.key }} · {{ p.name }}</option>{% endfor %}
+    </select>
+  {% else %}<input type="hidden" name="project" value="{{ project.pk }}">{% endif %}
+  <select name="type">
+    <option value="">Any type</option>
+    {% for value, label in type_choices %}<option value="{{ value }}" {% if f_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="status">
+    <option value="open" {% if f_status == 'open' %}selected{% endif %}>Open</option>
+    <option value="all" {% if f_status == 'all' %}selected{% endif %}>Any status</option>
+    {% for value, label in status_choices %}<option value="{{ value }}" {% if f_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="priority">
+    <option value="">Any priority</option>
+    {% for value, label in priority_choices %}<option value="{{ value }}" {% if f_priority == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="assignee" data-search="1" data-keep-blank="1">
+    <option value="">Anyone</option>
+    <option value="none" {% if f_assignee == 'none' %}selected{% endif %}>Unassigned</option>
+    {% for m in members %}<option value="{{ m.pk }}" {% if f_assignee == m.pk|stringformat:'s' %}selected{% endif %}>{{ m.display_name }}</option>{% endfor %}
+  </select>
+  <select name="scope">
+    <option value="">Everyone's</option>
+    <option value="mine" {% if f_scope == 'mine' %}selected{% endif %}>Assigned to me</option>
+    <option value="reported" {% if f_scope == 'reported' %}selected{% endif %}>Reported by me</option>
+    <option value="watching" {% if f_scope == 'watching' %}selected{% endif %}>Watching</option>
+  </select>
+  <span class="filters-sep"></span>
+  <label class="muted small" for="tkt-date-from">Date from</label>
+  <input type="date" id="tkt-date-from" name="date_from" value="{{ f_date_from }}">
+  <label class="muted small" for="tkt-date-to">to</label>
+  <input type="date" id="tkt-date-to" name="date_to" value="{{ f_date_to }}">
+  <button class="btn" type="submit">Filter</button>
+</form>

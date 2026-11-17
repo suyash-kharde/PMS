@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load perms static %}
+{% block title %}Ticket board{% if project %} · {{ project.key }}{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    {% if project %}<p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Tickets</p>{% endif %}
+    <h1>Ticket board{% if project %} · {{ project.name }}{% endif %}</h1>
+    <p class="muted">{{ tickets|length }} shown · drag a card to change its status</p>
+  </div>
+  <div class="row-actions">
+    <div class="btn-group">
+      <a class="btn btn-sm {% if view_mode != 'board' %}btn-primary{% endif %}" href="{% querystring view='list' %}">List</a>
+      <a class="btn btn-sm {% if view_mode == 'board' %}btn-primary{% endif %}" href="{% querystring view='board' %}">Board</a>
+    </div>
+    {% if can_create %}
+      <a class="btn btn-primary" href="{% if project %}{% url 'tickets:create_for_project' project.pk %}{% else %}{% url 'tickets:create' %}{% endif %}">+ New ticket</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if project %}{% include "_project_tabs.html" %}{% endif %}
+
+{% include "tickets/_kpis.html" %}
+{% include "tickets/_filters.html" %}
+
+<div class="board" id="ticketBoard" data-can-move="{{ can_triage|yesno:'1,0' }}">
+  {% for col in columns %}
+    <section class="column" data-status="{{ col.key }}">
+      <header class="tkt-col-{{ col.key }}">
+        <h3>{{ col.label }}</h3><span class="count">{{ col.tickets|length }}</span>
+      </header>
+      <div class="column-body" data-dropzone>
+        {% for t in col.tickets %}
+          {% include "tickets/_ticket_card.html" with t=t %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/tickets.js' %}"></script>{% endblock %}

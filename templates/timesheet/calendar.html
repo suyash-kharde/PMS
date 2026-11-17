@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Timesheet calendar · {{ APP_NAME }}{% endblock %}
+{% block content %}
+{% include "timesheet/_tabs.html" %}
+
+<section class="card ts-cal-card">
+  <header class="ts-cal-bar">
+    <div class="ts-cal-title">
+      <a class="ts-nav-btn" href="?month={{ prev|date:'Y-m' }}{% if target.pk != user.pk %}&user={{ target.pk }}{% endif %}" title="Previous month" aria-label="Previous month">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+      <h2>{{ first|date:"F Y" }}</h2>
+      <a class="ts-nav-btn" href="?month={{ next|date:'Y-m' }}{% if target.pk != user.pk %}&user={{ target.pk }}{% endif %}" title="Next month" aria-label="Next month">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></a>
+    </div>
+    <div class="ts-cal-tools">
+      {% if people|length > 1 %}
+        <form method="get" class="ts-personsel">
+          <input type="hidden" name="month" value="{{ first|date:'Y-m' }}">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <select name="user" onchange="this.form.submit()" aria-label="Person">
+            {% for p in people %}<option value="{{ p.pk }}" {% if p.pk == target.pk %}selected{% endif %}>{{ p.display_name }}{% if p.pk == user.pk %} (you){% endif %}</option>{% endfor %}
+          </select>
+        </form>
+      {% endif %}
+      <form method="get" class="ts-pick">
+        {% if target.pk != user.pk %}<input type="hidden" name="user" value="{{ target.pk }}">{% endif %}
+        <input type="month" name="month" value="{{ first|date:'Y-m' }}" id="ts-month" onchange="this.form.submit()" aria-label="Pick a month">
+        <button class="ts-nav-btn" type="button" title="Pick a month" onclick="var i=document.getElementById('ts-month');i.showPicker?i.showPicker():i.focus()">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
+      </form>
+      <a class="btn ts-today-btn" href="?month={{ this_month|date:'Y-m' }}{% if target.pk != user.pk %}&user={{ target.pk }}{% endif %}">Today</a>
+      <span class="ts-cal-legend"><span><i class="lg-work lg-primary"></i>Working hours</span><span><i class="lg-hol"></i>Holiday</span></span>
+    </div>
+  </header>
+
+  {% if view == "list" %}
+    <div class="ts-scroll">
+      <table class="table ts-cal-list">
+        <thead><tr><th>Date</th><th>Day</th><th>Hours</th><th>Projects</th><th>Attendance</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for c in days_list %}
+            <tr class="ts-{{ c.kind }}{% if c.today %} is-today{% endif %}">
+              <td><a href="{% url 'timesheet:week' %}?week={{ c.date|date:'Y-m-d' }}{% if target.pk != user.pk %}&user={{ target.pk }}{% endif %}"><strong>{{ c.date|date:"d M" }}</strong></a></td>
+              <td>{{ c.date|date:"D" }}{% if c.kind == "weekend" %} <span class="ts-pill">Weekend</span>{% elif c.kind == "holiday" %} <span class="ts-pill ts-pill-hol">{{ c.holiday.name }}</span>{% elif c.working_day %} <span class="ts-pill" title="{{ c.working_day.name }}">Working day</span>{% endif %}</td>
+              <td><strong>{{ c.hours }} h</strong>{% if c.leave %} <span class="ts-pill ts-pill-leave">Leave {{ c.leave }}h</span>{% endif %}</td>
+              <td class="small">{% for p, h in c.splits %}<span class="ts-split">{{ p.key }} {{ h }}h</span>{% empty %}<span class="muted">—</span>{% endfor %}</td>
+              <td>{% if c.attendance == "present" %}<span class="ts-att ok">● Present</span>{% elif c.attendance == "leave" %}<span class="ts-att">● Leave</span>{% elif c.attendance == "absent" %}<span class="ts-att bad">● Absent</span>{% else %}<span class="muted small">—</span>{% endif %}</td>
+              <td class="small">{% if c.status == "submitted" %}<span class="badge badge-active">Submitted</span>{% elif c.status == "draft" %}<span class="muted">Draft</span>{% else %}<span class="muted">—</span>{% endif %}{% if c.locked %} 🔒{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="ts-scroll">
+      <table class="ts-month">
+        <thead><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th class="ts-weekend">Sat</th><th class="ts-weekend">Sun</th></tr></thead>
+        <tbody>
+          {% for week in weeks %}
+            <tr>
+              {% for c in week %}
+                <td class="ts-{{ c.kind }}{% if not c.in_month %} is-out{% endif %}{% if c.today %} is-today{% endif %}">
+                  <a class="ts-mcell" href="{% url 'timesheet:week' %}?week={{ c.date|date:'Y-m-d' }}{% if target.pk != user.pk %}&user={{ target.pk }}{% endif %}"
+                     title="{% if c.holiday %}{{ c.holiday.name }} · {% elif c.working_day %}Working day: {{ c.working_day.name }} · {% endif %}{% if c.hours %}{{ c.hours }} h{% for p, h in c.splits %}{% if forloop.first %}: {% endif %}{{ p.key }} {{ h }}h{% if not forloop.last %} · {% endif %}{% endfor %}{% else %}No hours{% endif %}{% if c.leave %} · Leave {{ c.leave }}h{% endif %}{% if c.attendance == 'absent' %} · Absent{% endif %}">
+                    <span class="ts-mnum">{{ c.date|date:"j" }}</span>
+                    {% if c.in_month and c.kind == "holiday" %}<span class="ts-mhol">{{ c.holiday.name|truncatechars:18 }}</span>
+                    {% elif c.in_month and c.leave >= 8 %}<span class="ts-mleave">Leave</span>
+                    {% elif c.in_month and c.attendance == "absent" %}<span class="ts-mabs">Absent</span>
+                    {% else %}<span class="ts-mh2{% if not c.hours %} is-zero{% endif %}">{% if c.hours %}{{ c.hours }}h{% else %}0 h{% endif %}</span>{% if c.in_month and c.leave %} <span class="ts-mleave is-part">+{{ c.leave }}h leave</span>{% endif %}{% endif %}
+                  </a>
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

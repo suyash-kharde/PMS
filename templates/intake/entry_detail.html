@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load jobs %}
+{% load perms static %}
+{% block title %}{{ entry.title }} · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'intake:timeline' project.pk %}">Timeline</a> / #{{ entry.pk }}</p>
+    <h1>{{ entry.title }}</h1>
+    <p class="muted">
+      {{ entry.get_kind_display }} · {{ entry.occurred_at|date:"d M Y H:i" }} ·
+      {{ entry.author.display_name|default:"system" }}
+      <span class="badge status-{{ entry.status }}" data-status>{{ entry.get_status_display }}</span>
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if user|can:"brd.generate" %}
+      <form method="post" action="{% url 'intake:entry_sync_brd' entry.pk %}">{% csrf_token %}
+        <button class="btn btn-primary" type="submit"
+                title="Fold this entry into a new BRD version">⟳ Sync to BRD</button></form>
+    {% endif %}
+    {% if can_edit %}
+      {% if segments %}<a class="btn" href="{% url 'intake:transcript_edit' entry.pk %}">Edit transcript</a>{% endif %}
+      <form method="post" action="{% url 'intake:entry_reprocess' entry.pk %}">{% csrf_token %}
+        <button class="btn" type="submit">Reprocess</button></form>
+      <form method="post" action="{% url 'intake:entry_delete' entry.pk %}" data-confirm="Delete this timeline entry?">{% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button></form>
+    {% endif %}
+    {% if user|can:"brd.view" %}<a class="btn" href="{% url 'intake:brd' project.pk %}">BRD</a>{% endif %}
+  </div>
+</div>
+{% job_banners target=entry kinds="timeline_audio,timeline_doc,brd_sync" %}{% job_banners project=entry.project kinds="brd_update,brd_regenerate" %}
+
+<div class="grid-side">
+  <div class="stack">
+    {% if entry.speakers.all %}
+      <section class="card">
+        <header class="card-head"><h2>Speakers</h2>
+          <span class="muted small">Name each voice and map it to a project participant</span></header>
+        {% if entry.status == 'awaiting_speakers' %}
+          <div class="alert alert-error">The BRD update is waiting for these names.</div>
+        {% endif %}
+        {# clips are cut server-side, so this player only ever loads a few seconds #}
+        <audio id="entryAudio" preload="none" data-clip-url="{% url 'intake:entry_clip' entry.pk %}"></audio>
+        <form method="post" action="{% url 'intake:speakers_save' entry.pk %}">
+          {% csrf_token %}
+          <div class="table-wrap">
+            <table class="table speaker-table">
+              <thead><tr><th>Label</th><th>Listen</th><th>Talk time</th><th>Name</th><th>Project member</th><th>Side</th><th>Remark</th></tr></thead>
+              <tbody>
+                {% for row in speaker_forms %}
+                  <tr>
+                    <td><code>{{ row.speaker.label }}</code></td>
+                    <td class="listen-cell">
+                      {% if media.denoised and row.sample_ranges != "[]" %}
+                        <button type="button" class="btn btn-sm play-speaker" data-ranges="{{ row.sample_ranges }}"
+                                title="Short sample of this voice">▶ {{ row.sample_seconds }}s</button>
+                        <button type="button" class="btn btn-sm btn-ghost play-speaker" data-ranges="{{ row.full_ranges }}"
+                                title="Longer excerpt: the three longest turns">▶ {{ row.full_seconds }}s</button>
+                        <small class="muted block">{{ row.turn_count }} turn{{ row.turn_count|pluralize }}</small>
+                      {% else %}<span class="muted small">—</span>{% endif %}
+                    </td>
+                    <td class="muted small">{{ row.speaker.talk_seconds|floatformat:0 }}s</td>
+                    <td>{{ row.form.display_name }}</td>
+                    <td>{{ row.form.user }}</td>
+                    <td>{{ row.form.side }}</td>
+                    <td>{{ row.form.notes }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if can_edit %}
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit">Save names{% if entry.include_in_brd %} and update the BRD{% endif %}</button>
+              <label class="check"><input type="checkbox" name="update_brd" value="1" checked> Update BRD after saving</label>
+            </div>
+          {% endif %}
+        </form>
+      </section>
+    {% endif %}
+
+    {% if segments %}
+      <section class="card">
+        <header class="card-head"><h2>Transcript</h2>
+          <span class="muted small">{{ segments|length }} segments{% if media %} · ASR {{ media.asr_engine }}{% endif %}
+            {% if can_edit %}· <a class="link" href="{% url 'intake:transcript_edit' entry.pk %}">edit</a>{% endif %}</span></header>
+        <div class="transcript">
+          {% for seg in segments %}
+            <div class="seg" data-speaker="{{ seg.speaker_label }}">
+              <span class="seg-time">
+                {% if media.denoised %}
+                  <button type="button" class="seg-play" data-start="{{ seg.start|floatformat:2 }}"
+                          data-end="{{ seg.end|floatformat:2 }}" title="Play this line">▶</button>
+                {% endif %}
+                {{ seg.timecode }}</span>
+              <span class="seg-who" data-label="{{ seg.speaker_label }}">{{ seg.speaker_label }}</span>
+              <span class="seg-text">{{ seg.text }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if entry.body %}
+      <section class="card">
+        <header class="card-head"><h2>Text</h2></header>
+        <div class="prose">{{ entry.body|linebreaksbr }}</div>
+      </section>
+    {% endif %}
+  </div>
+
+  <aside class="stack">
+    {% if media %}
+      <section class="card">
+        <header class="card-head"><h2>Audio</h2></header>
+        <p class="muted small">Original</p>
+        <audio controls preload="none" src="{{ media.original.url }}"></audio>
+        {% if media.denoised %}
+          <p class="muted small">Noise reduced · engine <code>{{ media.denoise_engine }}</code></p>
+          <audio controls preload="none" src="{{ media.denoised.url }}"></audio>
+        {% endif %}
+        <dl class="kv">
+          <dt>Duration</dt><dd>{{ media.duration_seconds|floatformat:1 }}s</dd>
+          <dt>Sample rate</dt><dd>{{ media.sample_rate }} Hz</dd>
+          <dt>Diarization</dt><dd>{{ media.diarization_engine|default:"—" }}</dd>
+          <dt>ASR engine</dt><dd>{{ media.asr_engine|default:"—" }}</dd>
+          <dt>Language</dt><dd>{{ media.language|default:"auto" }}</dd>
+          <dt>Turns</dt><dd>{{ media.turns }}</dd>
+          <dt>Processing</dt><dd>{{ media.processing_seconds|floatformat:1 }}s</dd>
+        </dl>
+      </section>
+    {% elif entry.upload %}
+      <section class="card">
+        <header class="card-head"><h2>Attachment</h2></header>
+        <a class="btn" href="{{ entry.upload.url }}">Download {{ entry.original_name|default:"file" }}</a>
+      </section>
+    {% endif %}
+
+    <section class="card">
+      <header class="card-head"><h2>BRD</h2></header>
+      <p class="muted small">
+        {% if entry.brd_applied %}Folded into the document.{% else %}<strong>Not folded in yet.</strong>{% endif %}
+        Include in BRD: <strong>{{ entry.include_in_brd|yesno:"yes,no" }}</strong>
+      </p>
+      {% if user|can:"brd.generate" %}
+        <form method="post" action="{% url 'intake:entry_sync_brd' entry.pk %}">{% csrf_token %}
+          <button class="btn btn-primary btn-block" type="submit">⟳ Sync to BRD</button></form>
+        {% if entry.unnamed_speakers %}
+          <p class="muted small">Name all {{ entry.unnamed_speakers }} remaining speaker(s) first.</p>
+        {% endif %}
+      {% endif %}
+      <ul class="list">
+        {% for v in brd_versions %}
+          <li class="list-row"><a class="grow" href="{% url 'intake:brd' project.pk %}?v={{ v.number }}">v{{ v.number }}</a>
+            <span class="muted small">{{ v.created_at|date:"d M Y, H:i" }}</span></li>
+        {% empty %}<li class="empty">No version produced from this entry.</li>{% endfor %}
+      </ul>
+    </section>
+
+    <section class="card">
+      <header class="card-head"><h2>Processing log</h2></header>
+      <pre class="log" data-log>{{ entry.processing_log|default:"—" }}</pre>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/entry.js' %}"></script>{% endblock %}

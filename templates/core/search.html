@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Search · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Results for “{{ q }}”</h1></div>
+<div class="grid-3">
+  <section class="card"><header class="card-head"><h2>Customers</h2></header>
+    <ul class="list">{% for c in customers %}<li class="list-row"><span class="dot" style="--c:{{ c.color }}"></span><a class="grow" href="{{ c.get_absolute_url }}">{{ c.name }}</a></li>{% empty %}<li class="empty">None</li>{% endfor %}</ul></section>
+  <section class="card"><header class="card-head"><h2>Projects</h2></header>
+    <ul class="list">{% for p in projects %}<li class="list-row"><a class="grow" href="{{ p.get_absolute_url }}">{{ p.key }} · {{ p.name }}</a></li>{% empty %}<li class="empty">None</li>{% endfor %}</ul></section>
+  <section class="card"><header class="card-head"><h2>Tasks</h2></header>
+    <ul class="list">{% for t in tasks %}<li class="list-row"><a class="grow" href="{{ t.get_absolute_url }}">{{ t.title }}</a><span class="muted small">{{ t.project.key }}</span></li>{% empty %}<li class="empty">None</li>{% endfor %}</ul></section>
+  <section class="card"><header class="card-head"><h2>People</h2></header>
+    <ul class="list">{% for u in people %}<li class="list-row"><span class="avatar avatar-xs" style="--c:{{ u.color }}">{{ u.initials }}</span><a class="grow" href="{% url 'accounts:user_detail' u.pk %}">{{ u.display_name }}</a></li>{% empty %}<li class="empty">None</li>{% endfor %}</ul></section>
+</div>
+{% endblock %}

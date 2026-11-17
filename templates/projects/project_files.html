@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Documents · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<style>
+  .pf-up{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:14px 16px;margin-bottom:14px}
+  .pf-up label.field{margin:0;flex:1 1 240px}
+  .pf-name{font-weight:600;word-break:break-word}
+  .pf-ext{display:inline-block;min-width:38px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:6px;background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary);margin-right:8px}
+  .pf-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .pf-actions form{margin:0}
+</style>
+
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Documents</p>
+    <h1>{{ project.key }} · Documents</h1>
+    <p class="muted">Upload and keep this project's documents in one place. Everyone on the project can view and download them.</p>
+  </div>
+</div>
+{% include "_project_tabs.html" %}
+
+<form class="card pf-up" method="post" action="{% url 'projects:project_file_upload' project.pk %}" enctype="multipart/form-data">
+  {% csrf_token %}
+  <label class="field"><span>Files</span>
+    <input type="file" name="files" multiple required accept="{{ accept }}"></label>
+  <label class="field"><span>Note (optional)</span>
+    <input type="text" name="note" maxlength="300" placeholder="e.g. Signed contract v2"></label>
+  <button class="btn btn-primary" type="submit">⬆ Upload</button>
+  <p class="muted small" style="flex-basis:100%;margin:0">Up to {{ max_files }} files at a time, {{ max_mb }} MB each. Allowed: {{ allowed }}.</p>
+</form>
+
+<section class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Document</th><th>Note</th><th>Size</th><th>Uploaded by</th><th>Uploaded</th><th></th></tr></thead>
+    <tbody>
+      {% for f in files %}
+        <tr>
+          <td><span class="pf-ext">{{ f.extension|default:"file" }}</span><span class="pf-name">{{ f.original_name }}</span></td>
+          <td>{% if f.note %}{{ f.note }}{% else %}<span class="muted small">—</span>{% endif %}</td>
+          <td>{{ f.size|filesizeformat }}</td>
+          <td>{% if f.uploaded_by %}{{ f.uploaded_by.display_name }}{% else %}<span class="muted small">—</span>{% endif %}</td>
+          <td>{{ f.created_at|date:"d M Y, H:i" }}</td>
+          <td>
+            <div class="pf-actions">
+              {% if f.can_preview %}<a class="btn btn-sm" href="{% url 'projects:project_file_download' project.pk f.pk %}?view=1" target="_blank" rel="noopener">View</a>{% endif %}
+              <a class="btn btn-sm" href="{% url 'projects:project_file_download' project.pk f.pk %}">⬇ Download</a>
+              {% if f.can_delete %}
+                <form method="post" action="{% url 'projects:project_file_delete' project.pk f.pk %}"
+                      data-confirm="Delete {{ f.original_name }} from {{ project.key }}?">{% csrf_token %}
+                  <button class="btn btn-sm btn-delete" type="submit">🗑 Delete</button>
+                </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="empty">No documents yet. Upload the first one above.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

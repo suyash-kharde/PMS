@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load perms %}
+{% block title %}Projects · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Projects</h1><p class="muted">{{ projects|length }} visible to you</p></div>
+  <div class="row-actions">
+    <div class="segmented">
+      <a class="{% if view_mode != 'table' %}on{% endif %}" href="?{% if q %}q={{ q }}&{% endif %}view=grid">Cards</a>
+      <a class="{% if view_mode == 'table' %}on{% endif %}" href="?{% if q %}q={{ q }}&{% endif %}view=table">Table</a>
+    </div>
+    {% if can_export %}<a class="btn" href="{% url 'projects:export' %}" title="Excel of all your projects, grouped by customer">⬇ Download Project List</a>{% endif %}
+    {% if user|can:"project.create" %}<a class="btn btn-primary" href="{% url 'projects:create' %}">+ New project</a>{% endif %}
+  </div>
+</div>
+
+<form class="filters card" method="get">
+  <input type="hidden" name="view" value="{{ view_mode }}">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search name, key, description">
+  <select name="status"><option value="">Any status</option>
+    {% for value, label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="priority"><option value="">Any priority</option>
+    {% for value, label in priority_choices %}<option value="{{ value }}" {% if priority == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <label class="check"><input type="checkbox" name="archived" value="1" {% if show_archived %}checked{% endif %}> Archived</label>
+  <span class="filters-sep"></span>
+  <select name="created" title="Newly added">
+    <option value="">Added: any time</option>
+    {% for value, label in created_presets %}<option value="{{ value }}" {% if created == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <label class="muted small" for="proj-date-from">From</label>
+  <input type="date" id="proj-date-from" name="date_from" value="{{ date_from }}">
+  <label class="muted small" for="proj-date-to">To</label>
+  <input type="date" id="proj-date-to" name="date_to" value="{{ date_to }}">
+  <button class="btn" type="submit">Filter</button>
+  <a class="btn btn-ghost" href="{% url 'projects:list' %}">Reset</a>
+</form>
+
+{% if view_mode == 'table' %}
+  <div class="card table-wrap">
+    <table class="table">
+      <thead><tr><th>Key</th><th>Name</th><th>Status</th><th>Priority</th><th>Owner</th><th>Team</th><th>Due</th><th>Progress</th></tr></thead>
+      <tbody>
+      {% for p in projects %}
+        <tr>
+          <td><a href="{{ p.get_absolute_url }}"><strong>{{ p.key }}</strong></a></td>
+          <td>{{ p.name }}{% if p.parent %}<small class="muted"> · in {{ p.parent.key }}</small>{% endif %}</td>
+          <td><span class="badge badge-{{ p.status }}">{{ p.get_status_display }}</span></td>
+          <td><span class="prio prio-{{ p.priority }}"></span> {{ p.get_priority_display }}</td>
+          <td>{{ p.owner.display_name|default:"—" }}</td>
+          <td>{{ p.team.name|default:"—" }}</td>
+          <td class="{% if p.is_overdue %}danger{% endif %}">{{ p.due_date|date:"d M Y"|default:"—" }}</td>
+          <td><span class="progress-mini"><i style="width:{{ p.progress }}%"></i></span> {{ p.progress }}%</td>
+        </tr>
+      {% empty %}<tr><td colspan="8" class="empty">No projects match.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card-grid">
+    {% for p in projects %}
+      <article class="project-card" style="--c:{{ p.color }}">
+        <header>
+          <span class="badge badge-{{ p.status }}">{{ p.get_status_display }}</span>
+          <span class="prio prio-{{ p.priority }}" title="{{ p.get_priority_display }}"></span>
+        </header>
+        <h3><a href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
+        <p class="muted small">
+          {{ p.key }}{% if p.customer %} · <a class="link" href="{{ p.customer.get_absolute_url }}">{{ p.customer.name }}</a>{% endif %}
+          {% if p.parent %} · part of {{ p.parent.key }}{% endif %}</p>
+        <p class="clamp">{{ p.description|default:"No description." }}</p>
+        {% with track=p.status_track %}
+        <div class="stage-track{% if track.paused %} is-paused{% endif %}">
+          <div class="stage-track-top">
+            <span>{% if track.paused %}{{ p.get_status_display }}{% else %}Stage {{ track.current }} of {{ track.total }} · <b>{{ p.get_status_display }}</b>{% endif %}</span>
+            <b>{{ p.progress }}%</b>
+          </div>
+          <ol class="stage-steps" style="--n:{{ track.total }};--inset:{{ track.inset }}%;--span:{{ track.span }}%;--fill:{{ track.fill }}%">
+            {% for s in track.steps %}
+              <li class="st-{{ s.state }}"{% if s.state == "current" %} aria-current="step"{% endif %}>
+                <span class="st-dot">{% if s.state == "done" %}<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>{% else %}{{ s.number }}{% endif %}</span>
+                <span class="st-label">{{ s.label }}</span>
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+        {% endwith %}
+        <footer>
+          <span class="muted small">{{ p.open_tasks }} open task{{ p.open_tasks|pluralize }}</span>
+          {% if p.due_date %}<span class="muted small {% if p.is_overdue %}danger{% endif %}">Due {{ p.due_date|date:"d M" }}</span>{% endif %}
+        </footer>
+      </article>
+    {% empty %}<p class="empty">No projects match your filters.</p>{% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

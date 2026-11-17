@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Dev Log · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Dev Log</p>
+    <h1>Claude Code — Dev Log</h1>
+    <p class="muted">Development progress pushed by Claude Code (and logged by hand), tracked against milestones.</p>
+  </div>
+  <div class="row-actions">
+    {% if can_manage %}
+      <a class="btn btn-primary" href="{% url 'devlog:update_create' project.pk %}">+ Add update</a>
+    {% endif %}
+  </div>
+</div>
+
+{% include "_project_tabs.html" %}
+
+<section class="card">
+  <header class="card-head">
+    <h2>Milestones</h2>
+    <span class="muted small">{{ progress.done }} / {{ progress.total }} complete</span>
+  </header>
+  {% if progress.total %}
+    <div class="progress">
+      <i style="width:{% widthratio progress.done progress.total 100 %}%"></i>
+    </div>
+    <ul class="dl-milestones">
+      {% for m in progress.milestones %}
+        <li>
+          <span class="check-btn {% if m.done %}on{% endif %}" aria-hidden="true">✓</span>
+          <a class="grow {% if m.done %}done{% endif %}" href="?milestone={{ m.label|urlencode }}">{{ m.label }}</a>
+          <span class="dl-status dl-status-{{ m.status }}">{{ m.status|title }}</span>
+          <span class="muted small">{{ m.count }} update{{ m.count|pluralize }} · {{ m.last_at|date:"d M Y, H:i" }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">No milestones yet. They appear here as Claude Code pushes updates that name one.</p>
+  {% endif %}
+</section>
+
+<form class="filters card" method="get">
+  <select name="status"><option value="">Any status</option>
+    {% for value, label in status_choices %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="kind"><option value="">Any kind</option>
+    {% for value, label in kind_choices %}<option value="{{ value }}" {% if filters.kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  {% if filters.milestone %}<input type="hidden" name="milestone" value="{{ filters.milestone }}">{% endif %}
+  <button class="btn" type="submit">Filter</button>
+  <a class="btn btn-ghost" href="{% url 'devlog:project_log' project.pk %}">Reset</a>
+</form>
+
+<section class="card">
+  <header class="card-head">
+    <h2>Updates</h2>
+    <span class="muted small">{{ updates|length }} shown{% if filters.milestone %} · milestone “{{ filters.milestone }}”{% endif %}</span>
+  </header>
+  <ul class="feed">
+    {% for u in updates %}
+      <li class="dl-update">
+        <span class="avatar avatar-sm" style="--c:{{ u.created_by.color|default:'#64748b' }}">{{ u.created_by.initials|default:"CC" }}</span>
+        <div class="grow">
+          <div class="u-head">
+            <a href="{{ u.get_absolute_url }}"><strong>{{ u.headline }}</strong></a>
+            <span class="chip">{{ u.get_kind_display }}</span>
+            <span class="dl-status dl-status-{{ u.status }}">{{ u.get_status_display }}</span>
+            {% if u.milestone %}<span class="chip">◆ {{ u.milestone }}{% if u.milestone_done %} ✓{% endif %}</span>{% endif %}
+          </div>
+          <div class="u-meta">
+            <span>{{ u.created_by.display_name|default:"Claude Code" }}{% if u.source == 'mcp' %} · via MCP{% endif %}</span>
+            <span>{{ u.created_at|date:"d M Y, H:i" }}</span>
+            {% for label, url in u.links %}<a href="{{ url }}">{{ label }}</a>{% endfor %}
+            {% if u.files_changed %}<span>{{ u.files_changed|length }} file{{ u.files_changed|length|pluralize }}</span>{% endif %}
+            {% if u.pr_url %}<a href="{{ u.pr_url }}">PR</a>{% elif u.commit %}<span>{{ u.commit|truncatechars:12 }}</span>{% endif %}
+          </div>
+        </div>
+      </li>
+    {% empty %}
+      <li class="empty">Nothing logged yet.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

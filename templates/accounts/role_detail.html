@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ role.name }} · Roles{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'accounts:role_list' %}">Roles</a> / {{ role.name }}</p>
+    <h1><span class="dot" style="--c:{{ role.color }}"></span> {{ role.name }}</h1>
+    <p class="muted">
+      Rank {{ role.rank }} · {{ role.users.count }} users
+      {% if role.parent %}· inherits from <a href="{% url 'accounts:role_detail' role.parent.pk %}">{{ role.parent.name }}</a>{% endif %}
+    </p>
+  </div>
+</div>
+
+<div class="grid-side">
+  <section class="card" id="matrix" data-url="{% url 'accounts:role_grant' role.pk %}">
+    <header class="card-head"><h2>Capabilities</h2><span class="muted small">Changes save instantly</span></header>
+    <input type="search" id="capSearch" class="matrix-search" placeholder="Search permissions…" aria-label="Search permissions" autocomplete="off">
+    <p class="muted small" id="capNoMatch" hidden>No permission matches your search.</p>
+    {% for category, rows in by_category.items %}
+      <h3 class="sub">{{ category }}</h3>
+      <table class="table matrix">
+        <thead><tr><th>Capability</th><th>none</th>{% for value, label in scopes %}<th>{{ value }}</th>{% endfor %}<th>inherited</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+            <tr data-cap="{{ row.cap.pk }}">
+              <td><strong>{{ row.cap.label }}</strong><br><code class="muted">{{ row.cap.code }}</code></td>
+              <td><input type="radio" name="cap{{ row.cap.pk }}" value="none" {% if not row.scope %}checked{% endif %}></td>
+              {% for value, label in scopes %}
+                <td><input type="radio" name="cap{{ row.cap.pk }}" value="{{ value }}" {% if row.scope == value %}checked{% endif %}></td>
+              {% endfor %}
+              <td class="muted small">{% if row.inherited %}{{ row.inherited.0.name }} → {{ row.inherited.1 }}{% else %}—{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endfor %}
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <header class="card-head"><h2>Settings</h2></header>
+      <form method="post" action="{% url 'accounts:role_save' role.pk %}" class="stack-sm">{% csrf_token %}
+        {% for field in form %}<label class="field"><span>{{ field.label }}</span>{{ field }}</label>{% endfor %}
+        <button class="btn btn-primary" type="submit">Save</button>
+      </form>
+    </section>
+    <section class="card">
+      <header class="card-head"><h2>Users with this role</h2></header>
+      <ul class="list">
+        {% for u in users %}<li class="list-row"><span class="avatar avatar-xs" style="--c:{{ u.color }}">{{ u.initials }}</span>
+          <a class="grow" href="{% url 'accounts:user_detail' u.pk %}">{{ u.display_name }}</a></li>
+        {% empty %}<li class="empty">Nobody yet.</li>{% endfor %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/roles.js' %}"></script>{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Backup codes · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Your backup codes</h1>
+  <p class="muted">Your authenticator is set up. Save these codes somewhere safe, for example a password manager.</p></div></div>
+<section class="card" style="padding:18px 20px;max-width:560px">
+  <p style="margin-top:0"><strong>You will not see these codes again.</strong> Each one works once, if you ever lose your phone.</p>
+  <ul style="columns:2;font-family:monospace;font-size:18px;line-height:2;margin:10px 0 16px;padding-left:18px">
+    {% for code in codes %}<li>{{ code }}</li>{% endfor %}
+  </ul>
+  <a class="btn btn-primary" href="{{ next }}">I have saved them, continue</a>
+</section>
+{% endblock %}

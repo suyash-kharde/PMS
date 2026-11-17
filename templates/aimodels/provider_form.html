@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{% if provider %}Edit {{ provider.name }}{% else %}New endpoint{% endif %} · AI models{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'aimodels:list' %}">AI models</a> / {% if provider %}{{ provider.name }}{% else %}new{% endif %}</p>
+    <h1>{% if provider %}Edit {{ provider.name }}{% else %}Add an endpoint{% endif %}</h1>
+  </div>
+</div>
+
+<form class="card form-grid" method="post" enctype="multipart/form-data" autocomplete="off">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+  {% for field in form %}
+    <label class="field {% if field.name in 'notes,extra,base_url' %}span-2{% endif %}">
+      <span>{{ field.label }}</span>{{ field }}
+      {% if field.help_text %}<small class="muted">{{ field.help_text|safe }}</small>{% endif %}
+      {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+    </label>
+  {% endfor %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">Save endpoint</button>
+    <a class="btn btn-ghost" href="{% url 'aimodels:list' %}">Cancel</a>
+  </div>
+</form>
+
+<section class="card">
+  <header class="card-head"><h2>Certificates</h2></header>
+  <p class="muted small">
+    For an endpoint behind a private authority, upload that authority's certificate
+    (for example <code>ezua-domain-ca-cert.crt</code>) as the <strong>CA cert</strong>. It becomes the trust store for
+    this endpoint only — the rest of the system keeps using the system CAs. Client cert and key are for mTLS and are
+    optional. PEM format, <code>-----BEGIN …</code>.
+  </p>
+</section>
+{% endblock %}

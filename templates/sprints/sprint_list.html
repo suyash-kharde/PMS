@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load perms %}
+{% block title %}Sprints{% if project %} · {{ project.key }}{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    {% if project %}<p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Sprints</p>{% endif %}
+    <h1>Sprints{% if project %} · {{ project.name }}{% endif %}</h1>
+    <p class="muted">{{ sprints|length }} shown · {{ backlog_count }} requirement(s) in the backlog</p>
+  </div>
+  <div class="row-actions">
+    {% if project %}
+      <a class="btn" href="{% url 'sprints:requirement_list' project.pk %}">Backlog</a>
+      <a class="btn" href="{% url 'sprints:service_list' project.pk %}">Services</a>
+    {% endif %}
+    {% if can_generate %}
+      <a class="btn" href="{% url 'sprints:plan_run_start' project.pk %}">✦ Generate from project</a>
+    {% endif %}
+    {% if can_manage %}
+      <a class="btn btn-primary" href="{% if project %}{% url 'sprints:sprint_create_for_project' project.pk %}{% else %}{% url 'sprints:sprint_create' %}{% endif %}">+ New sprint</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if project %}{% include "_project_tabs.html" %}{% endif %}
+
+{% if plan_runs %}
+  <div class="card">
+    <header class="card-head"><h2>AI generations</h2></header>
+    <ul class="list">
+      {% for r in plan_runs %}
+        <li class="list-row">
+          <span class="badge status-{{ r.status }}">{{ r.get_status_display }}</span>
+          <a class="grow" href="{{ r.get_absolute_url }}">Run #{{ r.pk }} · {{ r.created_at|date:"d M H:i" }}
+            {% if not r.is_terminal %} · {{ r.phase }}{% endif %}</a>
+          <span class="muted small">{{ r.summary|truncatechars:80 }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+<form class="filters card" method="get">
+  {% if project %}<input type="hidden" name="project" value="{{ project.pk }}">{% else %}
+    <select name="project">
+      <option value="">All projects</option>
+      {% for p in projects %}<option value="{{ p.pk }}" {% if f_project == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.key }} · {{ p.name }}</option>{% endfor %}
+    </select>
+  {% endif %}
+  <input type="search" name="q" value="{{ q }}" placeholder="Search sprints…">
+  <select name="status">
+    <option value="">Any status</option>
+    {% for value, label in status_choices %}<option value="{{ value }}" {% if f_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Sprint</th><th>Project</th><th>Status</th><th>Dates</th><th>Requirements</th><th>Points</th><th>Progress</th></tr></thead>
+    <tbody>
+      {% for s in sprints %}
+        <tr>
+          <td><a href="{{ s.get_absolute_url }}"><strong>{{ s.key }}</strong> · {{ s.name }}</a></td>
+          <td><a href="{{ s.project.get_absolute_url }}">{{ s.project.key }}</a></td>
+          <td><span class="pill sp-status-{{ s.status }}">{{ s.get_status_display }}</span></td>
+          <td class="muted small">{{ s.start_date|date:"d M"|default:"—" }} → {{ s.end_date|date:"d M"|default:"—" }}</td>
+          <td>{{ s.n_req }}</td>
+          <td>{{ s.points_committed }}{% if s.capacity_points %} / {{ s.capacity_points }}{% endif %}</td>
+          <td><span class="progress-mini"><i style="width:{{ s.progress }}%"></i></span> {{ s.progress }}%</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="empty">No sprints yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

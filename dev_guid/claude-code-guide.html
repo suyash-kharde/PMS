@@ -1,0 +1,1350 @@
+<title>Planwise × Claude Code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --ground:#faf9fe; --surface:#ffffff; --sunken:#f3f2fb; --raise:#ffffff;
+  --ink:#1b1a24; --ink-2:#54525f; --ink-3:#88858f;
+  --line:#e7e4f1; --line-2:#efedf6;
+  --accent:#5b53d6; --accent-2:#7b74e6; --accent-soft:#ecebfb;
+  --click:#e11d48; --click-soft:#fdeef1;
+  --penpot:#128a67; --penpot-soft:#e2f5ef;
+  --ok:#12855a; --warn:#a4630a;
+  --code-bg:#f5f3fb; --code-ink:#39374a;
+  --step-n-ink:#ffffff;
+  --shadow:0 1px 2px rgba(24,22,45,.05), 0 14px 34px -18px rgba(24,22,45,.14);
+  /* figure palette */
+  --fig-chrome:#ece9f5; --fig-page:#ffffff; --fig-ink:#2b2935; --fig-ink-2:#6d6a7b;
+  --fig-mut:#d3d0e0; --fig-bar:#e6e3f1; --fig-accent:#5b53d6; --fig-line:#e0dcec;
+  --fig-dk-bg:#211f2b; --fig-dk-page:#2b2937; --fig-dk-ink:#d9d7e4; --fig-dk-bar:#3a3848; --fig-dk-mut:#514e63;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#121118; --surface:#1b1a23; --sunken:#211f2b; --raise:#232230;
+  --ink:#eae8f2; --ink-2:#a8a5b6; --ink-3:#7c7989;
+  --line:#2b2937; --line-2:#252332;
+  --accent:#948df2; --accent-2:#a49ef4; --accent-soft:#241f3d;
+  --click:#fb7185; --click-soft:#2a1720;
+  --penpot:#3fd9ac; --penpot-soft:#122b25;
+  --ok:#4ec99a; --warn:#e0a34a;
+  --code-bg:#201e2b; --code-ink:#c9c6da;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 40px -20px rgba(0,0,0,.7);
+  --fig-chrome:#2a2836; --fig-page:#211f2b; --fig-ink:#d8d6e3; --fig-ink-2:#8f8ca0;
+  --fig-mut:#413e52; --fig-bar:#33313f; --fig-accent:#948df2; --fig-line:#33313f;
+}}
+:root[data-theme="dark"]{
+  --ground:#121118; --surface:#1b1a23; --sunken:#211f2b; --raise:#232230;
+  --ink:#eae8f2; --ink-2:#a8a5b6; --ink-3:#7c7989;
+  --line:#2b2937; --line-2:#252332;
+  --accent:#948df2; --accent-2:#a49ef4; --accent-soft:#241f3d;
+  --click:#fb7185; --click-soft:#2a1720;
+  --penpot:#3fd9ac; --penpot-soft:#122b25;
+  --ok:#4ec99a; --warn:#e0a34a;
+  --code-bg:#201e2b; --code-ink:#c9c6da;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 40px -20px rgba(0,0,0,.7);
+  --fig-chrome:#2a2836; --fig-page:#211f2b; --fig-ink:#d8d6e3; --fig-ink-2:#8f8ca0;
+  --fig-mut:#413e52; --fig-bar:#33313f; --fig-accent:#948df2; --fig-line:#33313f;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+code,kbd,.mono{font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+
+.wrap{max-width:1140px; margin:0 auto; padding:0 24px}
+
+/* ---- masthead ---- */
+header.mast{
+  border-bottom:1px solid var(--line);
+  background:
+    radial-gradient(120% 140% at 88% -20%, var(--accent-soft), transparent 60%),
+    var(--surface);
+}
+.mast .wrap{padding:52px 24px 40px}
+.eyebrow{
+  font:600 12px/1 "IBM Plex Mono",monospace; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent); margin:0 0 14px;
+}
+h1{
+  font-weight:700; font-size:clamp(2rem,1.3rem + 2.6vw,3.1rem); line-height:1.06;
+  letter-spacing:-.02em; margin:0 0 16px; text-wrap:balance;
+}
+.lede{font-size:1.12rem; color:var(--ink-2); max-width:64ch; margin:0}
+.mast-meta{
+  margin-top:26px; display:flex; flex-wrap:wrap; gap:8px;
+  font:500 12.5px/1 "IBM Plex Mono",monospace;
+}
+.chip{
+  border:1px solid var(--line); background:var(--sunken); color:var(--ink-2);
+  padding:6px 10px; border-radius:999px; white-space:nowrap;
+}
+.chip b{color:var(--ink); font-weight:600}
+
+/* ---- layout ---- */
+.grid{display:block}
+@media (min-width:1060px){
+  .grid{display:grid; grid-template-columns:232px minmax(0,1fr); gap:56px; align-items:start}
+  nav.toc{position:sticky; top:24px}
+}
+nav.toc{padding:32px 0}
+nav.toc h4{
+  font:600 11px/1 "IBM Plex Mono",monospace; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 12px;
+}
+nav.toc ol{list-style:none; margin:0 0 22px; padding:0}
+nav.toc li{margin:0}
+nav.toc a{
+  display:block; padding:5px 10px; border-radius:7px; color:var(--ink-2);
+  font-size:13.5px; line-height:1.35;
+}
+nav.toc a:hover{background:var(--sunken); color:var(--ink); text-decoration:none}
+nav.toc .idx{color:var(--ink-3); font-family:"IBM Plex Mono",monospace; font-size:11.5px; margin-right:7px}
+
+main{padding:32px 0 96px; min-width:0}
+section{scroll-margin-top:20px; padding:14px 0 8px}
+.prose{max-width:68ch}
+.prose p,.prose ul,.prose ol{margin:0 0 18px}
+.prose ul,.prose ol{padding-left:22px}
+.prose li{margin:0 0 7px}
+.prose li::marker{color:var(--ink-3)}
+
+h2{
+  font-weight:700; font-size:1.62rem; letter-spacing:-.015em; line-height:1.15;
+  margin:56px 0 8px; text-wrap:balance;
+}
+h2:first-of-type{margin-top:8px}
+h2 .kicker{
+  display:block; font:600 12px/1 "IBM Plex Mono",monospace; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:9px;
+}
+h3{font-weight:600; font-size:1.16rem; letter-spacing:-.01em; margin:38px 0 6px}
+.section-note{color:var(--ink-2); max-width:66ch; margin:6px 0 26px}
+
+/* ---- steps ---- */
+.step{
+  display:grid; grid-template-columns:44px minmax(0,1fr); gap:20px;
+  padding:26px 0; border-top:1px solid var(--line);
+}
+.step:first-of-type{border-top:none}
+.step-n{
+  width:36px; height:36px; border-radius:50%;
+  background:var(--accent); color:var(--step-n-ink,#fff); font-weight:700; font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:"IBM Plex Mono",monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--step-n-ink:#141118}}
+:root[data-theme="dark"]{--step-n-ink:#141118}
+.step-h{font-weight:600; font-size:1.08rem; margin:4px 0 8px; letter-spacing:-.01em}
+.step-body>p{margin:0 0 14px; max-width:64ch; color:var(--ink-2)}
+.step-body>p strong{color:var(--ink)}
+.step-body ul{margin:0 0 14px; padding-left:20px; max-width:64ch; color:var(--ink-2)}
+.step-body li{margin-bottom:6px}
+
+/* ---- figure ---- */
+figure{margin:18px 0 6px}
+.screen{
+  border:1px solid var(--line); border-radius:12px; overflow:hidden;
+  background:var(--fig-page); box-shadow:var(--shadow);
+}
+.screen.dk{background:var(--fig-dk-page)}
+.screen svg{display:block; width:100%; height:auto}
+figcaption{
+  margin-top:10px; font-size:13px; color:var(--ink-3); line-height:1.5;
+  display:flex; gap:9px; align-items:baseline;
+}
+figcaption .pin{
+  flex:none; width:17px; height:17px; border-radius:50%; background:var(--click); color:#fff;
+  font:700 11px/17px "IBM Plex Mono",monospace; text-align:center;
+}
+
+/* ---- svg figure classes ---- */
+.ui .chrome{fill:var(--fig-chrome)}
+.ui .dot{fill:var(--fig-mut)}
+.ui .pg{fill:var(--fig-page)}
+.ui .pg-dk{fill:var(--fig-dk-page)}
+.ui .side{fill:var(--fig-chrome)}
+.ui .card{fill:var(--fig-page); stroke:var(--fig-line); stroke-width:1}
+.ui .card-dk{fill:var(--fig-dk-page); stroke:var(--fig-dk-bar); stroke-width:1}
+.ui .field{fill:var(--fig-chrome); stroke:var(--fig-line); stroke-width:1}
+.ui .field-dk{fill:var(--fig-dk-bg); stroke:var(--fig-dk-bar)}
+.ui .bar{fill:var(--fig-mut); opacity:.85}
+.ui .bar-dk{fill:var(--fig-dk-mut)}
+.ui .btnp{fill:var(--fig-accent)}
+.ui .btno{fill:none; stroke:var(--fig-bar); stroke-width:1.5}
+.ui .btno-dk{fill:none; stroke:var(--fig-dk-bar); stroke-width:1.5}
+.ui .tabu{stroke:var(--fig-accent); stroke-width:2.5}
+.ui .divide{stroke:var(--fig-line); stroke-width:1}
+.ui .divide-dk{stroke:var(--fig-dk-bar); stroke-width:1}
+.ui text{font-family:"IBM Plex Sans",sans-serif}
+.ui .h{fill:var(--fig-ink); font-weight:600; font-size:18px}
+.ui .h-dk{fill:var(--fig-dk-ink); font-weight:600; font-size:18px}
+.ui .t{fill:var(--fig-ink); font-size:12.5px}
+.ui .t-dk{fill:var(--fig-dk-ink); font-size:12.5px}
+.ui .m{fill:var(--fig-ink-2); font-size:11.5px}
+.ui .m-dk{fill:var(--fig-dk-mut); font-size:11.5px}
+.ui .wt{fill:#fff; font-size:12px; font-weight:600}
+.ui .wt-dk{fill:#141118; font-size:12px; font-weight:600}
+.ui .url{font-family:"IBM Plex Mono",monospace; fill:var(--fig-ink-2); font-size:11px}
+.ui .code{font-family:"IBM Plex Mono",monospace; fill:var(--fig-ink); font-size:11px}
+.ui .code-dk{font-family:"IBM Plex Mono",monospace; fill:var(--fig-dk-ink); font-size:11px}
+.ui .ok{fill:var(--ok)}
+.ui .warnfill{fill:var(--warn)}
+.ui .anno{fill:none; stroke:var(--click); stroke-width:2.5; stroke-dasharray:7 4}
+.ui .anno-solid{fill:none; stroke:var(--click); stroke-width:2.5}
+.ui .pinC{fill:var(--click)}
+.ui .pinT{fill:#fff; font:700 13px "IBM Plex Mono",monospace; text-anchor:middle}
+.ui .lbl{fill:var(--click); font:600 12px "IBM Plex Sans",sans-serif}
+.ui .lead{stroke:var(--click); stroke-width:2}
+
+/* ---- callout / code / table ---- */
+.note{
+  border:1px solid var(--line); border-left:3px solid var(--accent);
+  background:var(--surface); border-radius:8px; padding:14px 16px; margin:20px 0;
+  max-width:68ch; font-size:14.5px; color:var(--ink-2);
+}
+.note b{color:var(--ink)}
+.note.warn{border-left-color:var(--warn)}
+.note.pen{border-left-color:var(--penpot)}
+.note h5{margin:0 0 5px; font-size:13px; font-family:"IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3)}
+
+pre{
+  background:var(--code-bg); border:1px solid var(--line); border-radius:10px;
+  padding:15px 16px; overflow-x:auto; margin:16px 0; max-width:100%;
+  font-size:12.8px; line-height:1.7;
+}
+pre code{color:var(--code-ink); font-size:inherit}
+:not(pre)>code{
+  background:var(--code-bg); border:1px solid var(--line-2); border-radius:5px;
+  padding:1px 5px; font-size:.87em; color:var(--ink); white-space:nowrap;
+}
+.term{background:#1b1a26; border-color:#2c2a3c}
+.term code{color:#cfcce0}
+.term .c-dim{color:#7d7a97}
+.term .c-ok{color:#5fd0a6}
+.term .c-key{color:#a49ef4}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .term{background:#0d0c14}}
+
+.tbl-wrap{overflow-x:auto; margin:18px 0; border:1px solid var(--line); border-radius:10px}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{
+  font:600 11px/1.3 "IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sunken); position:sticky; top:0;
+}
+tr:last-child td{border-bottom:none}
+td code{font-size:12px}
+td .cap{color:var(--ink-3); font-size:12px}
+.tag{
+  display:inline-block; font:600 10.5px/1 "IBM Plex Mono",monospace; letter-spacing:.03em;
+  padding:3px 6px; border-radius:5px; border:1px solid var(--line);
+  background:var(--sunken); color:var(--ink-2); white-space:nowrap;
+}
+.tag.w{border-color:color-mix(in srgb,var(--warn) 40%,var(--line)); color:var(--warn); background:transparent}
+.tag.r{border-color:color-mix(in srgb,var(--ok) 45%,var(--line)); color:var(--ok); background:transparent}
+.tag.pen{border-color:color-mix(in srgb,var(--penpot) 45%,var(--line)); color:var(--penpot); background:transparent}
+
+/* ---- component cards ---- */
+.comp{border-top:1px solid var(--line); padding:34px 0 8px}
+.comp-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px}
+.comp-head h3{margin:0}
+.comp-head .where{font:500 12px/1 "IBM Plex Mono",monospace; color:var(--ink-3)}
+.comp h4{font-weight:600; font-size:1.02rem; letter-spacing:-.01em; margin:30px 0 4px}
+.subh{font-weight:600; font-size:1.02rem; letter-spacing:-.01em; margin:30px 0 4px}
+.getfile{
+  margin-top:26px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  font-size:13.5px; color:var(--ink-2);
+}
+.getfile a.dl{
+  display:inline-flex; align-items:center; gap:8px;
+  border:1px solid var(--accent); color:var(--accent); background:var(--surface);
+  padding:8px 14px; border-radius:8px; font-weight:600; font-size:13px; text-decoration:none;
+}
+.getfile a.dl:hover{background:var(--accent-soft); text-decoration:none}
+.getfile a.dl svg{width:15px; height:15px; fill:currentColor}
+.getfile .hint{font-size:12.5px; color:var(--ink-3)}
+.comp>p{max-width:66ch; color:var(--ink-2); margin:8px 0 18px}
+.two{display:grid; gap:22px}
+@media (min-width:780px){.two{grid-template-columns:1fr 1fr; align-items:start}}
+.mini h5{
+  font:600 11px/1 "IBM Plex Mono",monospace; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 8px;
+}
+.tool-list{list-style:none; margin:0; padding:0; font-size:13.5px}
+.tool-list li{padding:6px 0; border-bottom:1px solid var(--line-2); color:var(--ink-2)}
+.tool-list li:last-child{border-bottom:none}
+.tool-list code{font-size:12.5px; color:var(--ink)}
+
+hr.rule{border:none; border-top:1px solid var(--line); margin:56px 0}
+footer{border-top:1px solid var(--line); color:var(--ink-3); font-size:13px; padding:26px 0 60px}
+footer .wrap{display:flex; flex-wrap:wrap; gap:6px 18px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <p class="eyebrow">Setup &amp; usage guide</p>
+    <h1>Planwise&#8202;&#215;&#8202;Claude Code</h1>
+    <p class="lede">Wire a developer's Claude Code up to one Planwise project — its requirements, tickets, BRD and Penpot design file — through two MCP servers, then use every component from the terminal and the web.</p>
+    <div class="mast-meta">
+      <span class="chip">Server&nbsp;<b>172.16.16.214</b></span>
+      <span class="chip">Planwise MCP&nbsp;<b>per&#8209;project</b></span>
+      <span class="chip">Penpot MCP&nbsp;<b>shared</b></span>
+      <span class="chip">Claude Code&nbsp;<b>dev laptop</b></span>
+    </div>
+    <div class="getfile">
+      <a class="dl" id="dl" href="#" download="planwise-claude-code.html">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v8.6l2.7-2.7 1 1L8 12.6 4.3 8.9l1-1L8 10.6V1zM2 13h12v2H2z"/></svg>
+        Download this page
+      </a>
+      <span class="hint">a single self-contained HTML file &#183; also in the repo at <code>dev_guid/claude-code-guide.html</code></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+<nav class="toc" aria-label="Contents">
+  <h4>The picture</h4>
+  <ol>
+    <li><a href="#topology"><span class="idx">00</span>How the pieces connect</a></li>
+    <li><a href="#prereq"><span class="idx">0</span>Before you start</a></li>
+  </ol>
+  <h4>Part A — Wire it up</h4>
+  <ol>
+    <li><a href="#a1"><span class="idx">1</span>Open the project</a></li>
+    <li><a href="#a2"><span class="idx">2</span>Mint the Planwise MCP link</a></li>
+    <li><a href="#a3"><span class="idx">3</span>Copy the link</a></li>
+    <li><a href="#a4"><span class="idx">4</span>Open the Design tab</a></li>
+    <li><a href="#a5"><span class="idx">5</span>Enable Penpot's MCP server &amp; make a key</a></li>
+    <li><a href="#a6"><span class="idx">6</span>Build the .mcp.json</a></li>
+    <li><a href="#a7"><span class="idx">7</span>Connect MCP in the Penpot editor</a></li>
+    <li><a href="#a8"><span class="idx">8</span>Confirm in Claude Code</a></li>
+  </ol>
+  <h4>Part B — Use each component</h4>
+  <ol>
+    <li><a href="#c-context"><span class="idx">B1</span>Project context &amp; docs</a></li>
+    <li><a href="#c-ask"><span class="idx">B2</span>Ask&nbsp;AI &amp; the data agent</a></li>
+    <li><a href="#c-timeline"><span class="idx">B3</span>Timeline &#8594; BRD</a></li>
+    <li><a href="#c-tickets"><span class="idx">B4</span>Tickets</a></li>
+    <li><a href="#c-req"><span class="idx">B5</span>Requirements &amp; sprints</a></li>
+    <li><a href="#c-devlog"><span class="idx">B6</span>Dev Log</a></li>
+    <li><a href="#c-design"><span class="idx">B7</span>Generate UI in Penpot &amp; verify</a></li>
+    <li><a href="#c-models"><span class="idx">B8</span>AI model config</a></li>
+  </ol>
+  <h4>Reference</h4>
+  <ol>
+    <li><a href="#ref-tools"><span class="idx">R1</span>Full tool catalogue</a></li>
+    <li><a href="#ref-scopes"><span class="idx">R2</span>Who can do what</a></li>
+    <li><a href="#ref-trouble"><span class="idx">R3</span>Troubleshooting</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============================ TOPOLOGY ============================ -->
+<section id="topology">
+<h2><span class="kicker">00</span>How the pieces connect</h2>
+<p class="section-note">Claude Code runs on the developer's laptop. Everything else — Planwise, Penpot, and both MCP servers — runs on the server at <code>172.16.16.214</code>. The laptop talks to two independent MCP endpoints; a browser tab on the laptop carries the Penpot design canvas.</p>
+
+<figure>
+<div class="screen"><svg class="ui" viewBox="0 0 960 430" role="img" aria-label="Topology: the laptop connects to the Planwise MCP and Penpot MCP on the server; a browser tab bridges the Penpot plugin to the Penpot MCP.">
+  <rect class="pg" x="0" y="0" width="960" height="430"/>
+  <!-- laptop group -->
+  <rect x="36" y="70" width="250" height="290" rx="12" class="card"/>
+  <text x="56" y="102" class="h" font-size="15">Developer laptop</text>
+  <rect x="56" y="120" width="210" height="70" rx="8" class="field"/>
+  <text x="70" y="150" class="t" font-weight="600">Claude Code (terminal)</text>
+  <text x="70" y="170" class="m" font-family="IBM Plex Mono, monospace">.mcp.json &#8594; planwise + penpot</text>
+  <rect x="56" y="204" width="210" height="128" rx="8" class="field"/>
+  <text x="70" y="230" class="t" font-weight="600">Browser tab</text>
+  <text x="70" y="250" class="m">Penpot design file open</text>
+  <text x="70" y="268" class="m">Menu &#8594; MCP server &#8594; Connect</text>
+  <rect x="70" y="284" width="182" height="34" rx="6" class="btno"/>
+  <text x="161" y="306" class="m" text-anchor="middle" font-family="IBM Plex Mono, monospace">MCP bridge active</text>
+
+  <!-- server group -->
+  <rect x="470" y="42" width="454" height="346" rx="12" class="card"/>
+  <text x="492" y="72" class="h" font-size="15">Server &#183; 172.16.16.214</text>
+
+  <rect x="492" y="88" width="410" height="60" rx="8" class="field"/>
+  <text x="506" y="112" class="t" font-weight="600">Planwise (Django)</text>
+  <text x="506" y="132" class="url">https://172.16.16.214/mcp/&lt;token&gt;/</text>
+
+  <rect x="492" y="160" width="410" height="78" rx="8" class="field"/>
+  <text x="506" y="184" class="t" font-weight="600">Penpot MCP &#183; --multi-user</text>
+  <text x="506" y="204" class="url">http://172.16.16.214:9001/mcp/stream</text>
+  <text x="506" y="222" class="url">http://172.16.16.214:9001/mcp/ws  (plugin bridge)</text>
+
+  <rect x="492" y="250" width="410" height="56" rx="8" class="field"/>
+  <text x="506" y="274" class="t" font-weight="600">Penpot (design tool)</text>
+  <text x="506" y="292" class="url">http://172.16.16.214:9001/</text>
+
+  <rect x="492" y="318" width="410" height="52" rx="8" class="field"/>
+  <text x="506" y="341" class="t" font-weight="600">Postgres &#183; LLM / ASR endpoints</text>
+  <text x="506" y="358" class="m">per-project isolation, RAG index, model config</text>
+
+  <!-- connectors -->
+  <path d="M286 150 H470" class="lead" fill="none" marker-end="url(#ar)"/>
+  <text x="378" y="142" class="lbl" text-anchor="middle" font-size="11">tools / context</text>
+  <path d="M286 196 C 360 196, 380 199, 470 199" class="lead" fill="none" marker-end="url(#ar)"/>
+  <text x="378" y="240" class="lbl" text-anchor="middle" font-size="11">execute_code</text>
+  <path d="M286 300 C 380 300, 390 214, 470 210" class="lead" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="pinC"/></marker></defs>
+</svg></div>
+<figcaption><span class="pin">i</span> Two connections from the laptop: Claude Code &#8594; Planwise MCP (project data) and Claude Code &#8594; Penpot MCP (design). The dashed line is the browser plugin's WebSocket to the Penpot MCP bridge — that is what lets <code>execute_code</code> reach the canvas.</figcaption>
+</figure>
+
+<h3>What each server gives you</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Server</th><th>Scope</th><th>Auth</th><th>You get</th></tr></thead>
+<tbody>
+<tr>
+  <td><b>planwise</b><div class="cap">one per project</div></td>
+  <td>Exactly one Planwise project. A token cannot reach another project even if you can.</td>
+  <td>Secret token in the URL, shown once. Bound to the person who created it — every call runs as them and respects their capabilities.</td>
+  <td>Project overview, the BRD and standards docs, semantic search, a read-only SQL agent, tickets, requirements &amp; field specs, test cases, the dev log, and the Penpot file id.</td>
+</tr>
+<tr>
+  <td><b>penpot</b><div class="cap">shared, one instance</div></td>
+  <td>Whatever design file is open and bridged in the Penpot editor tab.</td>
+  <td>A per-account <b>MCP key</b> from Penpot's Settings &#8594; Integrations. In <code>--multi-user</code> mode the key pairs the Claude Code session with the editor tab that Connected with the same key.</td>
+  <td><code>execute_code</code> against the open file, a high-level API overview, type reference, and shape export.</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ============================ PREREQ ============================ -->
+<section id="prereq">
+<h2><span class="kicker">0</span>Before you start</h2>
+<div class="prose">
+<ul>
+  <li>You need the <code>mcp.manage</code> and <code>penpot.manage</code> capabilities on the project — that is Team&nbsp;Lead, Project&nbsp;Manager, Director or Administrator.</li>
+  <li>The Penpot design workspace is provisioned automatically by the background worker when the project is created (a bot account, its own team, and a starter file). If the project pre-dates the integration, open the <b>Design</b> tab once and it will provision.</li>
+  <li>Claude Code on the laptop must be able to reach <code>172.16.16.214</code> on ports <code>443</code> (Planwise) and <code>9001</code> (Penpot). The laptop's browser needs the same.</li>
+  <li>Real speaker diarization on audio uploads needs an <code>HF_TOKEN</code> set on the server; without it, transcripts still work but speaker turns are approximate.</li>
+</ul>
+</div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ PART A ============================ -->
+<section>
+<h2><span class="kicker">Part A</span>Wire Claude Code to the project</h2>
+<p class="section-note">Eight steps. Steps 1&#8211;4 happen in Planwise, steps 5&#8211;7 in Penpot, step 8 back in the terminal. Do them once per project per developer.</p>
+</section>
+
+<section id="a1">
+<div class="step">
+  <div class="step-n">1</div>
+  <div class="step-body">
+    <div class="step-h">Open the project and go to the <em>Claude Code</em> tab</div>
+    <p>From <b>Projects</b>, open the project. The tab strip runs along the top of the project page; scroll it right and pick <b>Claude Code</b>.</p>
+    <figure>
+    <div class="screen"><svg class="ui" viewBox="0 0 960 300" role="img" aria-label="Planwise project page for DDMS, with the Claude Code tab at the far right of the tab strip circled in red.">
+      <rect class="chrome" width="960" height="34"/>
+      <circle class="dot" cx="20" cy="17" r="4"/><circle class="dot" cx="36" cy="17" r="4"/><circle class="dot" cx="52" cy="17" r="4"/>
+      <rect x="78" y="8" width="470" height="18" rx="9" class="field"/>
+      <text x="90" y="21" class="url">https://172.16.16.214/projects/24/</text>
+      <rect class="pg" y="34" width="960" height="266"/>
+      <text x="34" y="64" class="m" font-family="IBM Plex Mono, monospace">SDF Group / Projects / DDMS</text>
+      <text x="34" y="96" class="h" font-size="20">Depot &amp; Dealer Management System</text>
+      <text x="34" y="118" class="m">Planning &#183; Medium &#183; Owner Site Admin</text>
+      <!-- stat tiles -->
+      <g>
+        <rect x="34" y="134" width="120" height="52" rx="7" class="card"/><rect x="164" y="134" width="120" height="52" rx="7" class="card"/>
+        <rect x="294" y="134" width="120" height="52" rx="7" class="card"/><rect x="424" y="134" width="120" height="52" rx="7" class="card"/>
+        <text x="46" y="152" class="m">Progress</text><text x="46" y="176" class="t" font-weight="600">0%</text>
+        <text x="176" y="152" class="m">Tasks</text><text x="176" y="176" class="t" font-weight="600">0</text>
+        <text x="306" y="152" class="m">Done</text><text x="306" y="176" class="t" font-weight="600">0</text>
+        <text x="436" y="152" class="m">Overdue</text><text x="436" y="176" class="t" font-weight="600">0</text>
+      </g>
+      <!-- tab strip -->
+      <line x1="34" y1="214" x2="926" y2="214" class="divide"/>
+      <text x="40" y="207" class="m">Board</text><text x="86" y="207" class="m">List</text><text x="120" y="207" class="m">Plan</text>
+      <text x="160" y="207" class="m">Timeline</text><text x="222" y="207" class="m">BRD</text><text x="256" y="207" class="m">People</text>
+      <text x="312" y="207" class="m">Tickets</text><text x="366" y="207" class="m">Sprints</text><text x="420" y="207" class="m">Services</text>
+      <text x="484" y="207" class="m">Tech&#8202;Stack</text><text x="556" y="207" class="m">Dev&#8202;Instructions</text><text x="672" y="207" class="m">Build&#8202;Plan</text>
+      <text x="752" y="207" class="m">Activity</text><text x="810" y="207" class="m">Ask&#8202;AI</text>
+      <text x="864" y="207" class="t" font-weight="600">Claude&#8202;Code</text>
+      <line x1="856" y1="214" x2="926" y2="214" class="tabu"/>
+      <!-- annotation -->
+      <rect class="anno" x="850" y="188" width="86" height="34" rx="8"/>
+      <circle class="pinC" cx="850" cy="188" r="13"/><text class="pinT" x="850" y="193">1</text>
+    </svg></div>
+    <figcaption><span class="pin">1</span> The <b>Claude Code</b> tab. If you do not see it, you lack <code>mcp.manage</code> on this project.</figcaption>
+    </figure>
+  </div>
+</div>
+</section>
+
+<section id="a2">
+<div class="step">
+  <div class="step-n">2</div>
+  <div class="step-body">
+    <div class="step-h">Fill the form and press <em>Create link</em></div>
+    <p>Give the link a name that says whose laptop it is. Leave both write boxes <strong>off</strong> for a read-only link; tick one only if this developer should be able to change tickets or requirement status from the terminal. Writes still require the underlying capability on your own account.</p>
+    <figure>
+    <div class="screen"><svg class="ui" viewBox="0 0 960 300" role="img" aria-label="The Create a link form on the Claude Code tab: a name field, two write-scope checkboxes, and a Create link button circled in red.">
+      <rect class="chrome" width="960" height="34"/>
+      <circle class="dot" cx="20" cy="17" r="4"/><circle class="dot" cx="36" cy="17" r="4"/><circle class="dot" cx="52" cy="17" r="4"/>
+      <rect x="78" y="8" width="470" height="18" rx="9" class="field"/>
+      <text x="90" y="21" class="url">https://172.16.16.214/projects/24/mcp/</text>
+      <rect class="pg" y="34" width="960" height="266"/>
+      <text x="34" y="66" class="h">Claude Code / MCP access</text>
+      <text x="34" y="88" class="m">Each link is a project-scoped MCP server &#8212; it exposes this project only.</text>
+      <rect x="34" y="104" width="892" height="150" rx="10" class="card"/>
+      <text x="52" y="130" class="t" font-weight="600">Create a link</text>
+      <text x="52" y="152" class="m">Name</text>
+      <rect x="52" y="158" width="240" height="30" rx="6" class="field"/>
+      <text x="64" y="178" class="t" font-family="IBM Plex Mono, monospace">Dev laptop &#8212; Alice</text>
+      <rect x="320" y="160" width="14" height="14" rx="3" class="btno"/>
+      <text x="344" y="164" class="m">Allow ticket writes &#8212; comment,</text>
+      <text x="344" y="178" class="m">change status, raise bugs</text>
+      <rect x="560" y="160" width="14" height="14" rx="3" class="btno"/>
+      <text x="584" y="164" class="m">Allow sprint writes &#8212; requirement</text>
+      <text x="584" y="178" class="m">status, test results, criteria</text>
+      <rect x="800" y="150" width="110" height="44" rx="8" class="btnp"/>
+      <text x="855" y="177" class="wt" text-anchor="middle">Create link</text>
+      <text x="52" y="224" class="m">Links are read-only unless a write scope is ticked. Every action is recorded in the project activity log.</text>
+      <rect class="anno" x="792" y="142" width="126" height="60" rx="10"/>
+      <circle class="pinC" cx="792" cy="142" r="13"/><text class="pinT" x="792" y="147">2</text>
+    </svg></div>
+    <figcaption><span class="pin">2</span> <b>Create link</b>. The two checkboxes are the only writes a token can ever do — everything else is read-only.</figcaption>
+    </figure>
+  </div>
+</div>
+</section>
+
+<section id="a3">
+<div class="step">
+  <div class="step-n">3</div>
+  <div class="step-body">
+    <div class="step-h">Copy the link — it is shown once</div>
+    <p>A panel drops in with the full URL and a ready-made <code>claude mcp add</code> command. <strong>Copy it now.</strong> Planwise stores only a hash; there is no way to see the token again. If you lose it, revoke the link and make a new one.</p>
+    <figure>
+    <div class="screen"><svg class="ui" viewBox="0 0 960 240" role="img" aria-label="The New link panel showing the one-time MCP URL and a claude mcp add command, with the Copy link button circled in red.">
+      <rect class="chrome" width="960" height="34"/>
+      <circle class="dot" cx="20" cy="17" r="4"/><circle class="dot" cx="36" cy="17" r="4"/><circle class="dot" cx="52" cy="17" r="4"/>
+      <rect x="78" y="8" width="470" height="18" rx="9" class="field"/>
+      <text x="90" y="21" class="url">https://172.16.16.214/projects/24/mcp/</text>
+      <rect class="pg" y="34" width="960" height="206"/>
+      <rect x="34" y="50" width="892" height="170" rx="10" class="card"/>
+      <text x="52" y="76" class="t" font-weight="600">New link &#8212; copy it now</text>
+      <text x="52" y="96" class="m">This is the only time the full link is shown. Store it somewhere safe.</text>
+      <rect x="52" y="108" width="740" height="30" rx="6" class="field"/>
+      <text x="64" y="128" class="url">https://172.16.16.214/mcp/pwmcp_ev_Fn6&#8230;NbMIw/</text>
+      <rect x="806" y="108" width="100" height="30" rx="6" class="btno"/>
+      <text x="856" y="128" class="m" text-anchor="middle">Copy link</text>
+      <text x="52" y="164" class="m">Add it to Claude Code with:</text>
+      <rect x="52" y="172" width="854" height="30" rx="6" class="field"/>
+      <text x="64" y="192" class="code">claude mcp add --transport http planwise-ddms https://172.16.16.214/mcp/pwmcp_ev_&#8230;/</text>
+      <rect class="anno" x="800" y="102" width="112" height="42" rx="9"/>
+      <circle class="pinC" cx="800" cy="102" r="13"/><text class="pinT" x="800" y="107">3</text>
+    </svg></div>
+    <figcaption><span class="pin">3</span> <b>Copy link</b>, or copy the whole <code>claude mcp add</code> line. Name it something you will recognise in <code>/mcp</code> — here <code>planwise-ddms</code>.</figcaption>
+    </figure>
+  </div>
+</div>
+</section>
+
+<section id="a4">
+<div class="step">
+  <div class="step-n">4</div>
+  <div class="step-body">
+    <div class="step-h">Open the <em>Design</em> tab</div>
+    <p>Back on the project, scroll the tab strip to <b>Design</b>. If the workspace is <span class="tag r">ready</span> you will see the buttons below. <b>Open in Penpot (edit)</b> takes you into the design file — you will need it open in the browser for step&nbsp;7.</p>
+    <figure>
+    <div class="screen"><svg class="ui" viewBox="0 0 960 300" role="img" aria-label="The Design tab for DDMS showing a ready Penpot workspace with Open in Penpot, Open viewer, and Team dashboard buttons; Open in Penpot is circled.">
+      <rect class="chrome" width="960" height="34"/>
+      <circle class="dot" cx="20" cy="17" r="4"/><circle class="dot" cx="36" cy="17" r="4"/><circle class="dot" cx="52" cy="17" r="4"/>
+      <rect x="78" y="8" width="470" height="18" rx="9" class="field"/>
+      <text x="90" y="21" class="url">https://172.16.16.214/projects/24/design/</text>
+      <rect class="pg" y="34" width="960" height="266"/>
+      <text x="34" y="66" class="h">Design workspace (Penpot)</text>
+      <text x="34" y="88" class="m">This project has its own isolated Penpot account, team and design file.</text>
+      <rect x="34" y="104" width="892" height="176" rx="10" class="card"/>
+      <text x="52" y="130" class="t" font-weight="600">See the design</text>
+      <rect x="856" y="116" width="54" height="20" rx="10" class="btno"/>
+      <text x="883" y="130" class="ok" text-anchor="middle" font-size="10" font-weight="700">ready</text>
+      <rect x="52" y="146" width="160" height="34" rx="7" class="btnp"/>
+      <text x="132" y="168" class="wt" text-anchor="middle">Open in Penpot (edit)</text>
+      <rect x="222" y="146" width="110" height="34" rx="7" class="btno"/>
+      <text x="277" y="168" class="m" text-anchor="middle">Open viewer</text>
+      <rect x="342" y="146" width="128" height="34" rx="7" class="btno"/>
+      <text x="406" y="168" class="m" text-anchor="middle">Team dashboard</text>
+      <text x="52" y="210" class="t" font-weight="600">Design files</text>
+      <line x1="52" y1="222" x2="908" y2="222" class="divide"/>
+      <text x="52" y="244" class="t">DDMS &#8212; UI</text>
+      <rect x="118" y="234" width="42" height="14" rx="4" class="field"/><text x="139" y="244" class="m" text-anchor="middle" font-size="9">starter</text>
+      <rect class="anno" x="46" y="140" width="172" height="46" rx="9"/>
+      <circle class="pinC" cx="46" cy="140" r="13"/><text class="pinT" x="46" y="145">4</text>
+    </svg></div>
+    <figcaption><span class="pin">4</span> <b>Open in Penpot (edit)</b>. Leave that browser tab open — the Penpot MCP drives whatever file is open there.</figcaption>
+    </figure>
+  </div>
+</div>
+</section>
+
+<section id="a5">
+<div class="step">
+  <div class="step-n">5</div>
+  <div class="step-body">
+    <div class="step-h">In Penpot, enable the MCP server and generate a key</div>
+    <p>The Penpot editor from step&nbsp;4 is where the design gets built. Its MCP server is a shared service on this box (nginx already proxies it), but it runs in <code>--multi-user</code> mode, so it needs a per-account <b>MCP key</b>. In Penpot: avatar (top-left) &#8594; <b>Settings</b> &#8594; <b>Integrations</b> &#8594; <b>MCP&nbsp;Server</b>. Flip <b>Status</b> to enabled, then <b>Generate MCP&nbsp;key</b>.</p>
+    <figure>
+    <div class="screen"><svg class="ui" viewBox="0 0 960 300" role="img" aria-label="Penpot Settings, Integrations page. An MCP Server card shows Status enabled, a Generate MCP key button circled in red, and the server URL with a userToken query parameter.">
+      <rect class="chrome" width="960" height="34"/>
+      <circle class="dot" cx="20" cy="17" r="4"/><circle class="dot" cx="36" cy="17" r="4"/><circle class="dot" cx="52" cy="17" r="4"/>
+      <rect x="78" y="8" width="470" height="18" rx="9" class="field"/>
+      <text x="90" y="21" class="url">172.16.16.214:9001/#/settings/access-tokens</text>
+      <rect class="pg" y="34" width="960" height="266"/>
+      <text x="34" y="64" class="h">Integrations</text>
+      <rect x="34" y="82" width="892" height="196" rx="10" class="card"/>
+      <text x="52" y="108" class="t" font-weight="600">MCP Server</text>
+      <rect x="128" y="97" width="34" height="15" rx="4" class="field"/><text x="145" y="108" class="m" text-anchor="middle" font-size="9">Beta</text>
+      <text x="52" y="128" class="m">Lets MCP clients interact directly with Penpot design files.</text>
+      <text x="52" y="154" class="t">Status</text>
+      <rect x="104" y="144" width="30" height="14" rx="7" fill="var(--fig-accent)"/><circle cx="127" cy="151" r="5" fill="#fff"/>
+      <text x="142" y="154" class="ok" font-size="10" font-weight="700">Enabled</text>
+      <text x="52" y="182" class="t" font-weight="600">MCP key</text>
+      <rect x="52" y="192" width="180" height="30" rx="7" class="btnp"/>
+      <text x="142" y="211" class="wt" text-anchor="middle">Generate MCP key</text>
+      <text x="52" y="244" class="m">Server URL for your MCP client (~/.mcp.json):</text>
+      <rect x="52" y="252" width="856" height="18" rx="5" class="field"/>
+      <text x="62" y="264" class="code" font-size="10">http://172.16.16.214:9001/mcp/stream?userToken=&lt;MCP-KEY&gt;</text>
+      <rect class="anno" x="46" y="186" width="192" height="42" rx="9"/>
+      <circle class="pinC" cx="46" cy="186" r="13"/><text class="pinT" x="46" y="191">5</text>
+    </svg></div>
+    <figcaption><span class="pin">5</span> <b>Generate MCP key</b>. It is shown <em>once</em> and is non-recoverable &#8212; copy it now. The panel also prints the full server URL with the key already appended; <b>Copy link</b> grabs it.</figcaption>
+    </figure>
+    <div class="note pen"><h5>What the key is for</h5>The MCP server pairs <em>your</em> Claude Code session with <em>your</em> Penpot editor tab by matching this key on both sides. One key per developer per Penpot account; set an expiry if you want. Regenerating it revokes the old one immediately.</div>
+    <div class="note"><b>Admin shortcut.</b> Each project's Penpot workspace already has a bot access token that the server accepts as a <code>userToken</code>. From the Planwise host: <code>docker exec pms_web python manage.py shell -c "from apps.penpot.models import PenpotWorkspace; print(PenpotWorkspace.objects.get(project__key='DDMS').access_token)"</code> &#8212; use that string in place of <code>&lt;MCP-KEY&gt;</code>, and sign in to Penpot as that bot for step&nbsp;7.</div>
+  </div>
+</div>
+</section>
+
+<section id="a6">
+<div class="step">
+  <div class="step-n">6</div>
+  <div class="step-body">
+    <div class="step-h">Build the <em>.mcp.json</em> on the laptop</div>
+    <p>The Design tab's <b>Connect Claude Code to this design</b> card shows the skeleton with both servers. Copy it to the Claude Code laptop (which must be able to reach <code>172.16.16.214</code>), swap <code>&lt;claude-code-token&gt;</code> for the Planwise token from step&nbsp;3, and paste the Penpot <code>userToken</code> from step&nbsp;5.</p>
+    <figure>
+    <div class="screen"><svg class="ui" viewBox="0 0 960 250" role="img" aria-label="The Connect Claude Code to this design card showing a .mcp.json example with planwise and penpot server entries, circled in red.">
+      <rect class="chrome" width="960" height="34"/>
+      <circle class="dot" cx="20" cy="17" r="4"/><circle class="dot" cx="36" cy="17" r="4"/><circle class="dot" cx="52" cy="17" r="4"/>
+      <rect x="78" y="8" width="470" height="18" rx="9" class="field"/>
+      <text x="90" y="21" class="url">https://172.16.16.214/projects/24/design/</text>
+      <rect class="pg" y="34" width="960" height="216"/>
+      <text x="34" y="64" class="t" font-weight="600">Connect Claude Code to this design</text>
+      <text x="34" y="84" class="m">Add both servers to your .mcp.json and restart Claude Code.</text>
+      <rect x="34" y="96" width="892" height="132" rx="8" class="field"/>
+      <text x="50" y="120" class="code">{</text>
+      <text x="66" y="136" class="code">"mcpServers": {</text>
+      <text x="82" y="152" class="code">"planwise": { "type": "http", "url": "https://172.16.16.214/mcp/&lt;claude-code-token&gt;/" },</text>
+      <text x="82" y="168" class="code">"penpot":   { "type": "http", "url": "http://172.16.16.214:9001/mcp/stream?userToken=&lt;MCP-KEY&gt;" }</text>
+      <text x="66" y="184" class="code">}</text>
+      <text x="50" y="200" class="code">}</text>
+      <rect class="anno" x="42" y="104" width="876" height="116" rx="8"/>
+      <circle class="pinC" cx="42" cy="104" r="13"/><text class="pinT" x="42" y="109">6</text>
+    </svg></div>
+    <figcaption><span class="pin">6</span> Copy this block, then fill in the two tokens on the laptop.</figcaption>
+    </figure>
+<pre><code>{
+  "mcpServers": {
+    "planwise": {
+      "type": "http",
+      "url": "https://172.16.16.214/mcp/<span style="color:var(--accent)">pwmcp_ev_Fn6&#8230;NbMIw</span>/"                 <span class="c-dim">&#8592; token from step 3</span>
+    },
+    "penpot": {
+      "type": "http",
+      "url": "http://172.16.16.214:9001/mcp/stream?userToken=<span style="color:var(--accent)">&lt;MCP-KEY&gt;</span>"   <span class="c-dim">&#8592; the key from step 5</span>
+    }
+  }
+}</code></pre>
+    <div class="note warn"><h5>Not any string</h5>Earlier setups let you invent the <code>userToken</code>. This instance is <code>--multi-user</code>: the value must be a real Penpot MCP key (step&nbsp;5) or it is rejected with <code>No userToken found in session context</code>.</div>
+  </div>
+</div>
+</section>
+
+<section id="a7">
+<div class="step">
+  <div class="step-n">7</div>
+  <div class="step-body">
+    <div class="step-h">In the Penpot editor, connect MCP for this file</div>
+    <p>Open the design file (step&nbsp;4) as the account whose key you generated. In the editor's header <b>menu (&#8801;)</b> &#8594; <b>MCP&nbsp;server</b> &#8594; <b>Connect</b> (there is also an <b>MCP</b> button on the toolbar). Penpot loads its own MCP plugin, hands it your key, and opens the bridge &#8212; you'll see <em>&#8220;MCP is now active in this tab.&#8221;</em> No manifest URL, no manual install.</p>
+    <figure>
+    <div class="screen dk"><svg class="ui" viewBox="0 0 960 300" role="img" aria-label="The Penpot editor header menu open, showing an MCP server submenu with Manage (Status: enabled) and a Connect item circled in red; a toast reads MCP is now active in this tab.">
+      <rect class="pg-dk" width="960" height="300"/>
+      <rect x="0" y="0" width="180" height="300" class="side"/>
+      <text x="16" y="26" class="t-dk" font-weight="600" font-size="11">DDMS &#8212; UI</text>
+      <!-- header menu button -->
+      <rect x="196" y="12" width="30" height="22" rx="5" class="card-dk"/>
+      <text x="205" y="28" class="t-dk" font-size="13">&#8801;</text>
+      <!-- dropdown -->
+      <rect x="196" y="40" width="230" height="150" rx="9" class="card-dk"/>
+      <text x="214" y="64" class="m-dk">File</text>
+      <text x="214" y="88" class="m-dk">Edit</text>
+      <text x="214" y="112" class="t-dk">MCP server &#8250;</text>
+      <text x="214" y="136" class="m-dk">Preferences</text>
+      <!-- submenu -->
+      <rect x="426" y="96" width="250" height="72" rx="9" class="card-dk"/>
+      <text x="444" y="120" class="m-dk">Manage (Status: enabled)</text>
+      <text x="444" y="146" class="t-dk" font-weight="600">Connect</text>
+      <!-- canvas + toast -->
+      <rect x="210" y="200" width="640" height="90" rx="4" fill="#e9e8ee"/>
+      <rect x="300" y="228" width="360" height="34" rx="8" fill="#1f6f4f"/>
+      <text x="480" y="250" class="wt" text-anchor="middle">MCP is now active in this tab.</text>
+      <rect x="880" y="0" width="80" height="300" class="side"/>
+      <rect class="anno" x="436" y="132" width="230" height="26" rx="7"/>
+      <circle class="pinC" cx="436" cy="132" r="13"/><text class="pinT" x="436" y="137">7</text>
+    </svg></div>
+    <figcaption><span class="pin">7</span> <b>Menu &#8594; MCP server &#8594; Connect</b>. The submenu's status dot / <em>Connect&#8596;Disconnect</em> label shows the bridge state. <b>Keep this tab open</b> &#8212; closing or reloading it drops the bridge and Penpot's design tools go dead in Claude Code.</figcaption>
+    </figure>
+    <div class="note warn"><h5>Possible warning</h5>The plugin may report <em>&#8220;Version mismatch: server built for Penpot 2.16.0, this instance is 2.16.x.&#8221;</em> It still works; mention it first if a call misbehaves.</div>
+    <div class="note pen"><h5>Same account both sides</h5>The bridge uses the key of whoever is signed in to this Penpot tab. If that isn't the same key that's in <code>.mcp.json</code>, Claude Code's <code>execute_code</code> / <code>export_shape</code> fail with <code>No plugin instance connected for user token</code>.</div>
+  </div>
+</div>
+</section>
+
+<section id="a8">
+<div class="step">
+  <div class="step-n">8</div>
+  <div class="step-body">
+    <div class="step-h">Confirm in Claude Code</div>
+    <p>Add the servers (or drop the edited <code>.mcp.json</code> in the project root) and run <code>/mcp</code>. Both should be connected.</p>
+    <pre class="term"><code><span class="c-dim">$</span> claude mcp add --transport http planwise-ddms https://172.16.16.214/mcp/pwmcp_ev_&#8230;/
+<span class="c-ok">Added HTTP MCP server planwise-ddms</span>
+<span class="c-dim">$</span> claude
+<span class="c-dim">&gt;</span> /mcp
+  <span class="c-key">planwise-ddms</span>   <span class="c-ok">connected</span>   28 tools &#183; 6 resources &#183; 2 prompts
+  <span class="c-key">penpot</span>          <span class="c-ok">connected</span>   4 tools
+<span class="c-dim">&gt;</span> use get_design_workspace to find this project's Penpot file, then
+  read the tech_stack and dev_instructions docs before you build anything.</code></pre>
+    <div class="note"><b>First move, every session:</b> call <code>project_overview</code>, then <code>get_document</code> for <code>tech_stack</code> and <code>dev_instructions</code>. Those define the stack and coding standards this project is built to — skipping them means rework.</div>
+  </div>
+</div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ PART B ============================ -->
+<section>
+<h2><span class="kicker">Part B</span>Use each component</h2>
+<p class="section-note">Every component below has a web side (for people) and an MCP side (for Claude Code). They read and write the same data — a bug you file from the terminal shows on the Tickets board a second later.</p>
+</section>
+
+<!-- B1 CONTEXT -->
+<section id="c-context">
+<div class="comp">
+  <div class="comp-head"><h3>Project context &amp; standards docs</h3><span class="where">Tech Stack &#183; Dev Instructions &#183; Build Plan tabs</span></div>
+  <p>Four documents ground everything: <b>Tech Stack</b> and <b>Dev Instructions</b> (the org defaults until a project overrides them), <b>Build Plan</b>, and the <b>BRD</b>. Each can be frozen once final. Claude Code reads them as markdown; people edit them on the tabs.</p>
+  <div class="two">
+    <div class="mini">
+      <figure>
+      <div class="screen"><svg class="ui" viewBox="0 0 480 260" role="img" aria-label="A project standards document tab with markdown content and a Freeze control.">
+        <rect class="chrome" width="480" height="30"/>
+        <circle class="dot" cx="16" cy="15" r="3.5"/><circle class="dot" cx="30" cy="15" r="3.5"/><circle class="dot" cx="44" cy="15" r="3.5"/>
+        <rect x="64" y="7" width="300" height="16" rx="8" class="field"/><text x="74" y="19" class="url">/projects/24/docs/dev_instructions/</text>
+        <rect class="pg" y="30" width="480" height="230"/>
+        <text x="22" y="58" class="h" font-size="15">Development Guidelines</text>
+        <rect x="380" y="44" width="70" height="22" rx="6" class="btno"/><text x="415" y="59" class="m" text-anchor="middle">Freeze</text>
+        <rect x="22" y="78" width="300" height="8" rx="3" class="bar"/>
+        <rect x="22" y="94" width="410" height="7" rx="3" class="bar"/>
+        <rect x="22" y="108" width="380" height="7" rx="3" class="bar"/>
+        <rect x="22" y="130" width="180" height="8" rx="3" class="bar"/>
+        <rect x="22" y="146" width="410" height="7" rx="3" class="bar"/>
+        <rect x="22" y="160" width="360" height="7" rx="3" class="bar"/>
+        <rect x="22" y="174" width="400" height="7" rx="3" class="bar"/>
+      </svg></div>
+      <figcaption>Edited on the tab; frozen when final.</figcaption>
+      </figure>
+    </div>
+    <div class="mini">
+      <h5>From Claude Code</h5>
+      <ul class="tool-list">
+        <li><code>project_overview</code> — status, people, counts, which docs exist</li>
+        <li><code>get_document(kind)</code> — <code>tech_stack</code>, <code>dev_instructions</code>, <code>build_plan</code>, <code>brd</code></li>
+        <li><code>get_design_workspace</code> — the Penpot file id + URL for this project</li>
+        <li>Resources: <code>planwise://project/overview</code>, <code>&#8230;/doc/tech_stack</code>, <code>&#8230;/brd</code>, <code>&#8230;/design</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- B2 ASK AI -->
+<section id="c-ask">
+<div class="comp">
+  <div class="comp-head"><h3>Ask&nbsp;AI &amp; the data agent</h3><span class="where">Ask&nbsp;AI tab</span></div>
+  <p>One agent with two switchable tools: <b>RAG</b> (semantic search over notes, transcripts, uploads and the BRD) and a <b>read-only SQL agent</b> scoped to this one project through a locked-down database role. The chat shows its sources and the exact SQL it ran.</p>
+  <div class="two">
+    <div class="mini">
+      <figure>
+      <div class="screen"><svg class="ui" viewBox="0 0 480 280" role="img" aria-label="The Ask AI chat with RAG and DB agent toggles on, source chips, and an expanded SQL used block.">
+        <rect class="chrome" width="480" height="30"/>
+        <circle class="dot" cx="16" cy="15" r="3.5"/><circle class="dot" cx="30" cy="15" r="3.5"/><circle class="dot" cx="44" cy="15" r="3.5"/>
+        <rect x="64" y="7" width="300" height="16" rx="8" class="field"/><text x="74" y="19" class="url">/projects/24/chat/</text>
+        <rect class="pg" y="30" width="480" height="250"/>
+        <rect x="20" y="42" width="12" height="12" rx="3" class="btnp"/><text x="40" y="52" class="m">RAG (documents)</text>
+        <rect x="140" y="42" width="12" height="12" rx="3" class="btnp"/><text x="160" y="52" class="m">DB agent (structured data)</text>
+        <circle cx="430" cy="48" r="4" class="ok"/><text x="442" y="52" class="m">Connected</text>
+        <rect x="250" y="66" width="210" height="24" rx="8" class="btnp"/><text x="355" y="82" class="wt" text-anchor="middle">Which FRs cover bulk imports?</text>
+        <rect x="20" y="102" width="360" height="22" rx="6" class="field"/><text x="30" y="117" class="m">Now let me check the database for their status&#8230;</text>
+        <rect x="20" y="130" width="150" height="16" rx="8" class="field"/><text x="28" y="142" class="m" font-size="9">timeline &#183; Migration done</text>
+        <rect x="178" y="130" width="150" height="16" rx="8" class="field"/><text x="186" y="142" class="m" font-size="9">brd &#183; DDMS BRD</text>
+        <text x="20" y="164" class="m">&#9662; SQL used</text>
+        <rect x="20" y="170" width="440" height="24" rx="6" class="field"/>
+        <text x="28" y="185" class="code" font-size="9.5">SELECT task_id, title, status FROM task WHERE title LIKE '%bulk import%'</text>
+      </svg></div>
+      <figcaption>Sources and SQL are always shown — nothing is a black box.</figcaption>
+      </figure>
+    </div>
+    <div class="mini">
+      <h5>From Claude Code</h5>
+      <ul class="tool-list">
+        <li><code>search_docs(query, limit)</code> — snippets, cheap, use often</li>
+        <li><code>ask_project(question, use_docs, use_data)</code> — synthesised answer with sources</li>
+        <li><code>query_data(sql)</code> — one read-only <code>SELECT</code> against 6 project-scoped views; cannot see other projects or base tables</li>
+      </ul>
+      <div class="note" style="margin-top:14px">Rough guide: <code>search_docs</code> for text you would recognise, <code>ask_project</code> when the answer needs joining several sources, <code>query_data</code> for counts and rollups.</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- B3 TIMELINE -->
+<section id="c-timeline">
+<div class="comp">
+  <div class="comp-head"><h3>Timeline &#8594; BRD</h3><span class="where">Timeline &amp; BRD tabs</span></div>
+  <p>Anything that happens on the project goes on the <b>Timeline</b> — a typed note, a dropped document, or an audio/video recording. Audio is denoised, diarized and transcribed; you name the speakers; then the LLM rewrites the whole BRD as a <b>new immutable version</b> with each requirement attributed to the person who raised it.</p>
+  <figure>
+  <div class="screen"><svg class="ui" viewBox="0 0 960 240" role="img" aria-label="The Add to the timeline form with Title, Kind, Occurred at, Body and Upload fields, next to the versioned BRD with a version list.">
+    <rect class="chrome" width="960" height="30"/>
+    <circle class="dot" cx="16" cy="15" r="3.5"/><circle class="dot" cx="30" cy="15" r="3.5"/><circle class="dot" cx="44" cy="15" r="3.5"/>
+    <rect x="64" y="7" width="360" height="16" rx="8" class="field"/><text x="74" y="19" class="url">/projects/24/timeline/</text>
+    <rect class="pg" y="30" width="960" height="210"/>
+    <rect x="24" y="44" width="470" height="180" rx="9" class="card"/>
+    <text x="42" y="68" class="t" font-weight="600">Add to the timeline</text>
+    <text x="42" y="88" class="m">Title</text><rect x="42" y="94" width="200" height="24" rx="5" class="field"/>
+    <text x="262" y="88" class="m">Kind</text><rect x="262" y="94" width="120" height="24" rx="5" class="field"/><text x="272" y="110" class="m" font-size="10">Audio recording</text>
+    <text x="42" y="140" class="m">Body / drop a file</text>
+    <rect x="42" y="146" width="410" height="44" rx="6" class="field"/>
+    <text x="52" y="172" class="m" font-size="10">meeting.m4a &#8212; denoise &#8594; diarize &#8594; transcribe</text>
+    <rect x="360" y="196" width="90" height="22" rx="6" class="btnp"/><text x="405" y="211" class="wt" text-anchor="middle">Add</text>
+    <!-- BRD -->
+    <rect x="516" y="44" width="420" height="180" rx="9" class="card"/>
+    <text x="534" y="68" class="t" font-weight="600">Business Requirement Document</text>
+    <rect x="820" y="54" width="46" height="18" rx="9" class="field"/><text x="843" y="66" class="m" text-anchor="middle" font-size="9">Frozen</text>
+    <text x="534" y="92" class="m">v5 &#183; +123 / &#8722;117 &#183; "Phase 1 complete&#8230;"</text>
+    <line x1="534" y1="102" x2="918" y2="102" class="divide"/>
+    <text x="534" y="122" class="m">v4  &#183;  03 Sep 10:47</text>
+    <text x="534" y="140" class="m">v3  &#183;  03 Sep 10:47</text>
+    <text x="534" y="158" class="m">v2  &#183;  03 Sep 10:46</text>
+    <text x="534" y="176" class="m">v1  &#183;  03 Sep 10:45  (created)</text>
+    <text x="534" y="204" class="m" font-size="10">every revision keeps full markdown + a unified diff</text>
+  </svg></div>
+  <figcaption>Left: add an entry. Right: the BRD is append-only — view any version, diff any two, download <code>.md</code>, or freeze it.</figcaption>
+  </figure>
+  <div class="note"><b>Claude Code reads the BRD, never writes it.</b> Use <code>get_document("brd")</code> or the <code>planwise://project/brd</code> resource. The BRD is regenerated only from timeline input, by the LLM, on the server.</div>
+</div>
+</section>
+
+<!-- B4 TICKETS -->
+<section id="c-tickets">
+<div class="comp">
+  <div class="comp-head"><h3>Tickets</h3><span class="where">Tickets tab &#183; /tickets/</span></div>
+  <p>Bugs, change requests, incidents and questions, on a triage lifecycle (<code>new &#8594; triaged &#8594; accepted &#8594; in_progress &#8594; resolved &#8594; closed</code>) that is deliberately separate from the delivery board. Keyed per project: <code>DDMS-1</code>, <code>DDMS-2</code>&#8230;</p>
+  <div class="two">
+    <div class="mini">
+      <figure>
+      <div class="screen"><svg class="ui" viewBox="0 0 480 260" role="img" aria-label="Ticket DDMS-1 detail page with a description and a Details sidebar showing status, type, priority, severity, assignee and component.">
+        <rect class="chrome" width="480" height="30"/>
+        <circle class="dot" cx="16" cy="15" r="3.5"/><circle class="dot" cx="30" cy="15" r="3.5"/><circle class="dot" cx="44" cy="15" r="3.5"/>
+        <rect x="64" y="7" width="300" height="16" rx="8" class="field"/><text x="74" y="19" class="url">/tickets/28/</text>
+        <rect class="pg" y="30" width="480" height="230"/>
+        <text x="22" y="56" class="h" font-size="14">Bulk import rejects CSV with a BOM</text>
+        <rect x="22" y="66" width="34" height="16" rx="4" class="field"/><text x="39" y="78" class="m" text-anchor="middle" font-size="9">Bug</text>
+        <rect x="62" y="66" width="34" height="16" rx="4" class="field"/><text x="79" y="78" class="m" text-anchor="middle" font-size="9">New</text>
+        <rect x="22" y="92" width="270" height="110" rx="8" class="card"/>
+        <text x="34" y="112" class="m" font-weight="600">Description</text>
+        <rect x="34" y="122" width="240" height="7" rx="3" class="bar"/>
+        <rect x="34" y="134" width="230" height="7" rx="3" class="bar"/>
+        <rect x="34" y="146" width="200" height="7" rx="3" class="bar"/>
+        <text x="34" y="176" class="m" font-size="10">Component: bulk import</text>
+        <rect x="306" y="92" width="152" height="150" rx="8" class="card"/>
+        <text x="318" y="112" class="m" font-weight="600">Details</text>
+        <text x="318" y="132" class="m">Status &#183; New</text>
+        <text x="318" y="150" class="m">Priority &#183; Medium</text>
+        <text x="318" y="168" class="m">Severity &#183; &#8212;</text>
+        <text x="318" y="186" class="m">Assignee &#183; Unassigned</text>
+        <text x="318" y="204" class="m">Reporter &#183; Site Admin</text>
+      </svg></div>
+      <figcaption>What <code>get_ticket("DDMS-1")</code> returns.</figcaption>
+      </figure>
+    </div>
+    <div class="mini">
+      <h5>From Claude Code</h5>
+      <ul class="tool-list">
+        <li><code>list_tickets</code> — filter by status / type / assignee / text</li>
+        <li><code>get_ticket(ref)</code> — full detail, comments, history, attachments</li>
+        <li><span class="tag w">write</span> <code>comment_ticket(ref, body)</code></li>
+        <li><span class="tag w">write</span> <code>set_ticket_status(ref, status, resolution)</code></li>
+        <li><span class="tag w">write</span> <code>create_ticket(title, type, &#8230;)</code> — file a bug you found</li>
+        <li>Prompt: <code>fix_bug(ticket)</code> — loads the ticket + the standards docs</li>
+      </ul>
+      <div class="note" style="margin-top:14px">Writes need <b>both</b> the link's <code>ticket writes</code> scope <b>and</b> your own capability (<code>ticket.comment</code> / <code>ticket.triage</code> / <code>ticket.create</code>).</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- B5 REQUIREMENTS -->
+<section id="c-req">
+<div class="comp">
+  <div class="comp-head"><h3>Requirements &amp; sprints</h3><span class="where">Sprints &amp; Requirements tabs</span></div>
+  <p>A requirement carries the whole build contract: a user story, <b>acceptance criteria</b> (plain statements or Given/When/Then), <b>field specs</b> (name, type, mandatory rule, length, validation), unit test cases, risks and dependencies. Sprints are time-boxed sets of requirements. An AI planner can draft the lot from the BRD and standards docs.</p>
+  <figure>
+  <div class="screen"><svg class="ui" viewBox="0 0 960 250" role="img" aria-label="Requirement DDMS-R1 detail page with Description, Acceptance criteria, Field specification and Unit test cases sections and a Status control.">
+    <rect class="chrome" width="960" height="30"/>
+    <circle class="dot" cx="16" cy="15" r="3.5"/><circle class="dot" cx="30" cy="15" r="3.5"/><circle class="dot" cx="44" cy="15" r="3.5"/>
+    <rect x="64" y="7" width="300" height="16" rx="8" class="field"/><text x="74" y="19" class="url">/requirements/30/</text>
+    <rect class="pg" y="30" width="960" height="220"/>
+    <text x="24" y="58" class="h" font-size="16">DDMS-R1 &#183; Add Participant form</text>
+    <rect x="24" y="66" width="42" height="16" rx="4" class="field"/><text x="45" y="78" class="m" text-anchor="middle" font-size="9">Draft</text>
+    <rect x="24" y="92" width="620" height="66" rx="8" class="card"/>
+    <text x="36" y="112" class="m" font-weight="600">Description &#183; User story</text>
+    <rect x="36" y="122" width="580" height="7" rx="3" class="bar"/><rect x="36" y="134" width="520" height="7" rx="3" class="bar"/>
+    <rect x="24" y="166" width="300" height="70" rx="8" class="card"/>
+    <text x="36" y="186" class="m" font-weight="600">Acceptance criteria &#183; 0/0 met</text>
+    <rect x="36" y="196" width="90" height="20" rx="5" class="btno"/><text x="81" y="210" class="m" text-anchor="middle" font-size="10">+ Add criterion</text>
+    <rect x="336" y="166" width="308" height="70" rx="8" class="card"/>
+    <text x="348" y="186" class="m" font-weight="600">Field specification</text>
+    <text x="348" y="204" class="m" font-size="10">name &#183; type &#183; mandatory &#183; length &#183; validation</text>
+    <rect x="656" y="92" width="150" height="66" rx="8" class="card"/>
+    <text x="668" y="112" class="m" font-weight="600">Status</text>
+    <rect x="668" y="122" width="120" height="24" rx="5" class="field"/><text x="678" y="138" class="m" font-size="10">Draft &#8595;</text>
+    <rect x="656" y="166" width="150" height="70" rx="8" class="card"/>
+    <text x="668" y="186" class="m" font-weight="600">Risks &#183; Dependencies</text>
+    <text x="668" y="204" class="m" font-size="10">Unit test cases</text>
+  </svg></div>
+  <figcaption>The field specs and acceptance criteria are the contract to build a screen against — <code>get_requirement("DDMS-R7")</code> returns all of it.</figcaption>
+  </figure>
+  <div class="two">
+    <div class="mini">
+      <h5>Read</h5>
+      <ul class="tool-list">
+        <li><code>list_sprints</code> / <code>get_sprint(number)</code></li>
+        <li><code>list_requirements</code> — by sprint / status / text / backlog</li>
+        <li><code>get_requirement(number)</code> — criteria, field specs, tests, deps</li>
+        <li><code>list_test_cases</code> / <code>get_test_case(number)</code></li>
+        <li><code>list_external_services</code> — Stripe, SMTP, client data&#8230; and readiness</li>
+      </ul>
+    </div>
+    <div class="mini">
+      <h5>Write <span class="tag w">sprint writes + capability</span></h5>
+      <ul class="tool-list">
+        <li><code>set_requirement_status(number, status)</code> — move to <code>in_review</code> when the design is done</li>
+        <li><code>record_test_result(number, status, &#8230;)</code></li>
+        <li><code>add_acceptance_criterion(&#8230;)</code> — if the design surfaced a state nobody specified</li>
+        <li>Prompt: <code>implement_requirement(requirement)</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- B6 DEV LOG -->
+<section id="c-devlog">
+<div class="comp">
+  <div class="comp-head"><h3>Dev Log</h3><span class="where">Dev&nbsp;Log tab</span></div>
+  <p>Where Claude Code reports <em>its own</em> progress — what it built, how far along, which milestone it reaches. Milestones are free-text; the tab rolls them into an "N of M complete" bar. People can add updates by hand too.</p>
+  <div class="two">
+    <div class="mini">
+      <figure>
+      <div class="screen"><svg class="ui" viewBox="0 0 480 220" role="img" aria-label="The Dev Log tab showing a milestone rollup and a feed of updates, with an Add update button.">
+        <rect class="chrome" width="480" height="30"/>
+        <circle class="dot" cx="16" cy="15" r="3.5"/><circle class="dot" cx="30" cy="15" r="3.5"/><circle class="dot" cx="44" cy="15" r="3.5"/>
+        <rect x="64" y="7" width="300" height="16" rx="8" class="field"/><text x="74" y="19" class="url">/projects/24/devlog/</text>
+        <rect class="pg" y="30" width="480" height="190"/>
+        <text x="22" y="56" class="h" font-size="15">Claude Code &#8212; Dev Log</text>
+        <rect x="380" y="42" width="80" height="22" rx="6" class="btnp"/><text x="420" y="57" class="wt" text-anchor="middle">+ Add update</text>
+        <rect x="22" y="72" width="436" height="42" rx="8" class="card"/>
+        <text x="34" y="90" class="m" font-weight="600">Milestones</text>
+        <text x="410" y="90" class="m">2 / 5 complete</text>
+        <rect x="34" y="98" width="412" height="6" rx="3" class="bar"/>
+        <rect x="34" y="98" width="165" height="6" rx="3" class="btnp"/>
+        <rect x="22" y="124" width="436" height="80" rx="8" class="card"/>
+        <text x="34" y="144" class="m" font-weight="600">Updates</text>
+        <rect x="34" y="152" width="300" height="7" rx="3" class="bar"/>
+        <rect x="34" y="166" width="360" height="7" rx="3" class="bar"/>
+        <rect x="34" y="180" width="270" height="7" rx="3" class="bar"/>
+      </svg></div>
+      <figcaption>Updates also surface in the project Activity feed.</figcaption>
+      </figure>
+    </div>
+    <div class="mini">
+      <h5>From Claude Code</h5>
+      <ul class="tool-list">
+        <li><code>list_dev_milestones</code> — <b>call first</b> so labels stay consistent</li>
+        <li><code>push_dev_update(headline, status, milestone, &#8230;)</code> — links to a sprint / requirement / ticket / task</li>
+        <li><code>update_dev_update(id, status, milestone_done)</code> — flip to <code>completed</code></li>
+        <li><code>list_dev_updates</code> / <code>get_dev_update(id)</code></li>
+      </ul>
+      <div class="note" style="margin-top:14px">Available on <b>any</b> link — it only ever writes to the dev log, so no write scope is needed.</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- B7 DESIGN -->
+<section id="c-design">
+<div class="comp">
+  <div class="comp-head"><h3>Generate UI in Penpot &amp; verify visually</h3><span class="where">Design tab &#183; Penpot editor</span></div>
+  <p>This is the whole point of connecting both servers: Claude Code pulls the spec from Planwise, draws the screen in your Penpot file with <code>execute_code</code>, checks its own work against the acceptance criteria with <code>export_shape</code>, you glance at the browser to approve, and only then does it move on to writing the component.</p>
+
+  <div class="note pen"><h5>Does the MCP help?</h5>Yes — without it there is no path from a Planwise requirement to a Penpot canvas. The <code>penpot</code> server's <code>execute_code</code> is the drawing hand; <code>export_shape</code> is how Claude Code <em>sees</em> what it drew; the <code>planwise</code> server's <code>get_requirement</code> is the checklist it grades against.</p></div>
+
+  <h4>The loop</h4>
+  <figure>
+  <div class="screen"><svg class="ui" viewBox="0 0 960 220" role="img" aria-label="The design loop: get the spec, read the API, build one board, export and self-check, human review in the browser, then set status and write code — with a loop back to build.">
+    <rect class="pg" width="960" height="220"/>
+    <g font-size="11">
+      <rect x="24" y="70" width="130" height="52" rx="9" class="card"/>
+      <text x="89" y="92" class="t" text-anchor="middle" font-weight="600">1 &#183; Get spec</text>
+      <text x="89" y="108" class="m" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9">get_requirement</text>
+
+      <rect x="184" y="70" width="130" height="52" rx="9" class="card"/>
+      <text x="249" y="92" class="t" text-anchor="middle" font-weight="600">2 &#183; API rules</text>
+      <text x="249" y="108" class="m" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9">high_level_overview</text>
+
+      <rect x="344" y="70" width="130" height="52" rx="9" class="card"/>
+      <text x="409" y="92" class="t" text-anchor="middle" font-weight="600">3 &#183; Build one board</text>
+      <text x="409" y="108" class="m" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9">execute_code</text>
+
+      <rect x="504" y="70" width="130" height="52" rx="9" class="card"/>
+      <text x="569" y="92" class="t" text-anchor="middle" font-weight="600">4 &#183; Self-check</text>
+      <text x="569" y="108" class="m" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9">export_shape</text>
+
+      <rect x="664" y="70" width="130" height="52" rx="9" class="card"/>
+      <text x="729" y="92" class="t" text-anchor="middle" font-weight="600">5 &#183; You approve</text>
+      <text x="729" y="108" class="m" text-anchor="middle" font-size="9">glance at the browser</text>
+
+      <rect x="824" y="70" width="120" height="52" rx="9" class="card" style="fill:var(--accent-soft)"/>
+      <text x="884" y="92" class="t" text-anchor="middle" font-weight="600">6 &#183; Proceed</text>
+      <text x="884" y="108" class="m" text-anchor="middle" font-size="9">status + code</text>
+    </g>
+    <g fill="none" class="lead">
+      <path d="M154 96 H184" marker-end="url(#arrLoop)"/>
+      <path d="M314 96 H344" marker-end="url(#arrLoop)"/>
+      <path d="M474 96 H504" marker-end="url(#arrLoop)"/>
+      <path d="M634 96 H664" marker-end="url(#arrLoop)"/>
+      <path d="M794 96 H824" marker-end="url(#arrLoop)"/>
+      <path d="M569 122 V150 H409 V122" marker-end="url(#arrLoop)" stroke-dasharray="6 4"/>
+    </g>
+    <text x="489" y="168" class="lbl" text-anchor="middle" font-size="10.5">fails a criterion &#8594; fix &amp; rebuild</text>
+    <defs><marker id="arrLoop" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="pinC"/></marker></defs>
+  </svg></div>
+  <figcaption><span class="pin">i</span> The <em>build &#8594; self-check</em> loop (3&#8211;4) repeats per board and per state (empty, filled, error) until every acceptance criterion passes. Only then does <em>6&#183;Proceed</em> happen.</figcaption>
+  </figure>
+
+  <h4>Verifying visually — two channels</h4>
+  <div class="two">
+    <div class="mini">
+      <figure>
+      <div class="screen dk"><svg class="ui" viewBox="0 0 480 280" role="img" aria-label="The Penpot editor with a built Add Participant form board on the canvas — the live view the person watches.">
+        <rect class="pg-dk" width="480" height="280"/>
+        <rect x="0" y="0" width="120" height="280" class="side"/>
+        <text x="12" y="24" class="t-dk" font-weight="600" font-size="10">DDMS &#8212; UI</text>
+        <text x="12" y="46" class="m-dk" font-size="9">LAYERS</text>
+        <rect x="8" y="54" width="104" height="14" rx="3" class="field-dk"/><text x="16" y="65" class="t-dk" font-size="9">Add Participant</text>
+        <rect x="14" y="72" width="98" height="11" rx="3" class="field-dk"/><text x="22" y="81" class="m-dk" font-size="8">First name</text>
+        <rect x="14" y="86" width="98" height="11" rx="3" class="field-dk"/><text x="22" y="95" class="m-dk" font-size="8">Last name</text>
+        <rect x="14" y="100" width="98" height="11" rx="3" class="field-dk"/><text x="22" y="109" class="m-dk" font-size="8">Email</text>
+        <rect x="14" y="114" width="98" height="11" rx="3" class="field-dk"/><text x="22" y="123" class="m-dk" font-size="8">Side</text>
+        <!-- canvas with board -->
+        <rect x="150" y="30" width="290" height="230" rx="4" fill="#eceaf1"/>
+        <rect x="188" y="52" width="214" height="186" rx="8" fill="#ffffff" stroke="#d8d5e2"/>
+        <text x="204" y="74" fill="#2b2935" font-size="11" font-weight="600">Add Participant</text>
+        <text x="204" y="96" fill="#6d6a7b" font-size="8">First name *</text><rect x="204" y="100" width="182" height="14" rx="3" fill="#f2f0f7" stroke="#e0dcec"/>
+        <text x="204" y="128" fill="#6d6a7b" font-size="8">Last name *</text><rect x="204" y="132" width="182" height="14" rx="3" fill="#f2f0f7" stroke="#e0dcec"/>
+        <text x="204" y="160" fill="#6d6a7b" font-size="8">Email</text><rect x="204" y="164" width="182" height="14" rx="3" fill="#f2f0f7" stroke="#e0dcec"/>
+        <text x="204" y="192" fill="#6d6a7b" font-size="8">Side</text>
+        <rect x="204" y="196" width="88" height="16" rx="8" fill="#5b53d6"/><text x="248" y="207" fill="#fff" font-size="8" text-anchor="middle">Client</text>
+        <rect x="296" y="196" width="90" height="16" rx="8" fill="none" stroke="#c9c6d6"/><text x="341" y="207" fill="#8a8792" font-size="8" text-anchor="middle">Internal</text>
+        <rect x="330" y="222" width="56" height="12" rx="6" fill="#5b53d6"/>
+      </svg></div>
+      <figcaption><b>You</b> — the browser tab redraws live after every <code>execute_code</code>. This is your viewport; it must stay open.</figcaption>
+      </figure>
+    </div>
+    <div class="mini">
+      <figure>
+      <div class="screen"><svg class="ui" viewBox="0 0 480 280" role="img" aria-label="Claude Code's self-check: a small render of the board next to the acceptance criteria checklist with three passing and one failing.">
+        <rect class="pg" width="480" height="280"/>
+        <text x="20" y="34" class="h" font-size="13">export_shape &#8594; grade vs. DDMS-R7</text>
+        <rect x="20" y="46" width="150" height="170" rx="8" fill="#f2f0f7" stroke="#e0dcec"/>
+        <text x="34" y="66" fill="#2b2935" font-size="9" font-weight="600">Add Participant</text>
+        <rect x="34" y="76" width="122" height="12" rx="3" fill="#fff" stroke="#e0dcec"/>
+        <rect x="34" y="94" width="122" height="12" rx="3" fill="#fff" stroke="#e0dcec"/>
+        <rect x="34" y="112" width="122" height="12" rx="3" fill="#fff" stroke="#e0dcec"/>
+        <rect x="34" y="132" width="58" height="14" rx="7" fill="#5b53d6"/><rect x="96" y="132" width="60" height="14" rx="7" fill="none" stroke="#c9c6d6"/>
+        <rect x="112" y="176" width="44" height="12" rx="6" fill="#5b53d6"/>
+        <g font-size="11">
+          <text x="190" y="60" class="ok" font-weight="700">&#10003;</text><text x="208" y="60" class="m">C1 &#183; all 5 fields present</text>
+          <text x="190" y="84" class="ok" font-weight="700">&#10003;</text><text x="208" y="84" class="m">C2 &#183; First / Last / Email marked *</text>
+          <text x="190" y="108" class="ok" font-weight="700">&#10003;</text><text x="208" y="108" class="m">C4 &#183; Side is a 2-option toggle</text>
+          <text x="190" y="132" class="warnfill" font-weight="700" style="fill:var(--click)">&#10007;</text><text x="208" y="132" class="lbl">C3 &#183; email-format error state missing</text>
+          <text x="208" y="152" class="m" font-size="10">&#8594; add the invalid-email variant, re-export</text>
+        </g>
+      </svg></div>
+      <figcaption><b>Claude Code</b> — exports the board, reads it back, ticks off each Given/When/Then criterion, fixes what fails, and only shows you a build that passes.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <h4>A real session</h4>
+  <pre class="term"><code><span class="c-dim">&gt;</span> Read DDMS-R7 and the tech_stack doc. Confirm the open Penpot file is "DDMS &#8212; UI".
+  <span class="c-dim">planwise: get_requirement("DDMS-R7") &#183; get_document("tech_stack") &#183; get_design_workspace</span>
+  <span class="c-dim">penpot:   execute_code("return penpot.currentFile.name")  &#8594; "DDMS &#8212; UI"  &#10003;</span>
+
+<span class="c-dim">&gt;</span> Build the Add Participant board: PrimeNG-style form, every field from the field
+  spec, mandatory markers, the client/internal side as a segmented control.
+  <span class="c-dim">penpot: high_level_overview &#183; penpot_api_info("Board") &#183; execute_code(&#8230; createBoard, addFlexLayout &#8230;)</span>
+  <span class="c-dim">penpot: export_shape(board)  &#8594; checks C1&#8211;C4 &#183; C3 fails &#183; fixes &#183; re-exports</span>
+  <span class="c-ok">"Board ready. 4/4 criteria. Empty + filled + invalid-email states. Take a look?"</span>
+
+<span class="c-dim">&gt;</span> <span class="c-dim">[you look at the browser tab]</span> The segmented control should sit above Email, not below.
+
+<span class="c-dim">&gt;</span> <span class="c-dim">[fix, re-export]</span>  <span class="c-ok">approved</span>
+
+<span class="c-dim">&gt;</span> Set DDMS-R7 to in_review, log it, then generate the Angular component + template
+  from this board, following dev_instructions.
+  <span class="c-dim">planwise: set_requirement_status("DDMS-R7","in_review")</span>
+  <span class="c-dim">planwise: push_dev_update("Add Participant form designed &amp; approved",</span>
+  <span class="c-dim">                          requirement="DDMS-R7", milestone="Participant management")</span>
+  <span class="c-dim">&#8230; writes add-participant.component.ts / .html &#8230;</span>
+
+<span class="c-dim">&gt;</span> push a dev update when it compiles.
+  <span class="c-dim">planwise: push_dev_update("Add Participant component built", status="completed", &#8230;)</span></code></pre>
+
+  <h4>Then proceed to the next step</h4>
+  <p style="max-width:66ch;color:var(--ink-2)">Approval is the gate between design and code. Once you have looked and said yes:</p>
+  <ul class="prose" style="max-width:66ch">
+    <li><b>Mark the requirement</b> — <code>set_requirement_status("DDMS-R7", "in_review")</code> (or <code>ready</code> if it was still draft).</li>
+    <li><b>Log the milestone</b> — <code>push_dev_update(&#8230;, milestone="&#8230;")</code> so the Dev Log shows design is done and code is next.</li>
+    <li><b>Generate the component</b> against <code>dev_instructions</code> (Angular&nbsp;+&nbsp;PrimeNG here). Claude Code can read the board's structure and Penpot's own CSS export to keep the markup faithful.</li>
+    <li><b>Close the loop</b> — another <code>push_dev_update</code> when the code compiles, and <code>record_test_result</code> as you write the unit tests from the acceptance criteria.</li>
+  </ul>
+
+  <div class="note warn"><b>Not headless.</b> If <code>execute_code</code> or <code>export_shape</code> hangs, the design file is not open in the browser or the MCP bridge dropped. Re-open the file (step&nbsp;4) and re-connect via <b>Menu &#8594; MCP server &#8594; Connect</b> (step&nbsp;7). Build <b>one board at a time</b> and export after each — a single giant <code>execute_code</code> that half-works is hard to unpick.</div>
+</div>
+</section>
+
+<!-- B8 MODELS -->
+<section id="c-models">
+<div class="comp">
+  <div class="comp-head"><h3>AI model configuration</h3><span class="where">AI models &#183; Model services (admin)</span></div>
+  <p>Every endpoint the system calls — the LLM that writes the BRD, the ASR endpoint, embeddings, the reranker — is a row you edit in the UI, with its own key and CA certificate. Changes take effect on the next call, no redeploy. <b>Model services</b> is the live health page. Claude Code does not touch this; it is admin territory.</p>
+  <figure>
+  <div class="screen"><svg class="ui" viewBox="0 0 960 210" role="img" aria-label="The AI models page listing LLM and ASR endpoint rows with model, endpoint, TLS status and Test/Edit buttons.">
+    <rect class="chrome" width="960" height="30"/>
+    <circle class="dot" cx="16" cy="15" r="3.5"/><circle class="dot" cx="30" cy="15" r="3.5"/><circle class="dot" cx="44" cy="15" r="3.5"/>
+    <rect x="64" y="7" width="300" height="16" rx="8" class="field"/><text x="74" y="19" class="url">/ai-models/</text>
+    <rect class="pg" y="30" width="960" height="180"/>
+    <text x="24" y="56" class="h">AI / ML models</text>
+    <text x="24" y="76" class="m">Endpoints, keys and certificates. Changes apply on the next call &#8212; no redeploy.</text>
+    <rect x="24" y="88" width="912" height="52" rx="8" class="card"/>
+    <text x="38" y="108" class="t" font-weight="600">LLM &#8212; writes the BRD</text>
+    <text x="38" y="126" class="m" font-family="IBM Plex Mono, monospace">RedHatAI/Qwen3.6-35B-A3B-NVFP4</text>
+    <text x="430" y="126" class="url">https://&#8230;multimodel-qwen36&#8230;/v1</text>
+    <rect x="740" y="102" width="60" height="16" rx="4" class="field"/><text x="770" y="114" class="ok" text-anchor="middle" font-size="9" font-weight="700">CA ok</text>
+    <rect x="812" y="100" width="50" height="24" rx="6" class="btno"/><text x="837" y="116" class="m" text-anchor="middle" font-size="10">Test</text>
+    <rect x="872" y="100" width="50" height="24" rx="6" class="btno"/><text x="897" y="116" class="m" text-anchor="middle" font-size="10">Edit</text>
+    <rect x="24" y="150" width="912" height="46" rx="8" class="card"/>
+    <text x="38" y="170" class="t" font-weight="600">ASR &#8212; speech to text</text>
+    <text x="38" y="187" class="m" font-family="IBM Plex Mono, monospace">Qwen/Qwen3-ASR-0.6B  &#183;  remote</text>
+  </svg></div>
+  <figcaption>Keys are write-only; a blank field on edit keeps the stored value. Diarization needs <code>HF_TOKEN</code> and the model gate accepted.</figcaption>
+  </figure>
+</div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ REFERENCE ============================ -->
+<section id="ref-tools">
+<h2><span class="kicker">Reference</span>Full tool catalogue</h2>
+<p class="section-note">The <code>planwise</code> server &#8212; 28 tools. Read tools work on any link; <span class="tag w">write</span> tools need the matching scope on the link <em>and</em> the capability on your account.</p>
+
+<h3>Context &amp; search</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>project_overview</code></td><td>Status, dates, customer, team, members, counts, which documents exist. Start here.</td></tr>
+<tr><td><code>get_document(kind)</code></td><td><code>tech_stack</code> / <code>dev_instructions</code> / <code>build_plan</code> / <code>brd</code> as full markdown.</td></tr>
+<tr><td><code>get_design_workspace</code></td><td>The project's Penpot workspace: status, <code>file_id</code>, <code>file_name</code>, <code>workspace_url</code>, <code>viewer_url</code>.</td></tr>
+<tr><td><code>search_docs(query, limit)</code></td><td>Semantic search over notes, transcripts, uploads and the BRD. Returns snippets.</td></tr>
+<tr><td><code>ask_project(question, use_docs, use_data)</code></td><td>The Ask AI agent — RAG + optional SQL — returns a synthesised answer with sources.</td></tr>
+<tr><td><code>query_data(sql)</code></td><td>One read-only <code>SELECT</code> against 6 project-scoped views. No other project, no base tables.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Tickets</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>list_tickets</code></td><td>Filter by status, type, assignee, free text; open-only by default.</td></tr>
+<tr><td><code>get_ticket(ref)</code></td><td><code>"DDMS-14"</code> or <code>14</code> — description, repro, expected vs actual, comments, history.</td></tr>
+<tr><td><code>comment_ticket(ref, body)</code> <span class="tag w">write</span></td><td>Post an analysis or a proposed fix.</td></tr>
+<tr><td><code>set_ticket_status(ref, status, resolution)</code> <span class="tag w">write</span></td><td>Move through the triage lifecycle.</td></tr>
+<tr><td><code>create_ticket(title, type, &#8230;)</code> <span class="tag w">write</span></td><td>Raise a bug / change request found while working.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Requirements, sprints &amp; tests</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>list_sprints</code> &#183; <code>get_sprint(number)</code></td><td>Goal, dates, committed points, progress; a sprint's requirements.</td></tr>
+<tr><td><code>list_requirements</code></td><td>By sprint, status, text, or backlog-only.</td></tr>
+<tr><td><code>get_requirement(number)</code></td><td>User story, acceptance criteria, field specs, risks, dependencies, unit tests.</td></tr>
+<tr><td><code>list_test_cases</code> &#183; <code>get_test_case(number)</code></td><td>Developer unit tests derived from the criteria.</td></tr>
+<tr><td><code>list_external_services</code></td><td>Stripe, SMTP, cloud accounts, client data — and how ready each is. Never the secrets.</td></tr>
+<tr><td><code>set_requirement_status(number, status)</code> <span class="tag w">write</span></td><td><code>draft / ready / in_progress / in_review / done / deferred</code>.</td></tr>
+<tr><td><code>record_test_result(number, status, &#8230;)</code> <span class="tag w">write</span></td><td><code>pass / fail / blocked / not_run</code> with an actual-result note.</td></tr>
+<tr><td><code>add_acceptance_criterion(&#8230;)</code> <span class="tag w">write</span></td><td>A plain statement or a Given/When/Then triple.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Dev log</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>list_dev_milestones</code></td><td>The milestone rollup. Call before <code>push_dev_update</code> to reuse labels.</td></tr>
+<tr><td><code>push_dev_update(headline, &#8230;)</code></td><td>Record progress; link a sprint / requirement / ticket / task; name a milestone. <span class="tag r">no scope needed</span></td></tr>
+<tr><td><code>update_dev_update(id, &#8230;)</code></td><td>Amend — usually <code>in_progress</code> &#8594; <code>completed</code>, or flag the milestone done.</td></tr>
+<tr><td><code>list_dev_updates</code> &#183; <code>get_dev_update(id)</code></td><td>The feed, newest first.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Resources &amp; prompts</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Kind</th><th>Name</th></tr></thead>
+<tbody>
+<tr><td>Resource</td><td><code>planwise://project/overview</code> &#183; <code>&#8230;/brd</code> &#183; <code>&#8230;/design</code> &#183; <code>&#8230;/doc/{tech_stack,dev_instructions,build_plan}</code></td></tr>
+<tr><td>Prompt</td><td><code>fix_bug(ticket)</code> &#183; <code>implement_requirement(requirement)</code> — each loads the item plus the standards docs</td></tr>
+</tbody>
+</table></div>
+
+<h3>The <code>penpot</code> server</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>high_level_overview</code></td><td>The Penpot plugin API rules. Read once per session before building.</td></tr>
+<tr><td><code>penpot_api_info(type)</code></td><td>Reference for a specific type — member names, not guesses.</td></tr>
+<tr><td><code>execute_code(code)</code></td><td>Runs async JS with <code>penpot</code>, <code>penpotUtils</code>, <code>console</code>, <code>storage</code> in scope, against the open file.</td></tr>
+<tr><td><code>export_shape</code></td><td>Render a shape to PNG or SVG.</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<section id="ref-scopes">
+<h2><span class="kicker">Reference</span>Who can do what</h2>
+<div class="tbl-wrap"><table>
+<thead><tr><th>To&#8230;</th><th>you need the capability</th><th>and the link scope</th></tr></thead>
+<tbody>
+<tr><td>Create / revoke MCP links</td><td><code>mcp.manage</code></td><td>&#8212;</td></tr>
+<tr><td>Manage the Penpot workspace</td><td><code>penpot.manage</code></td><td>&#8212;</td></tr>
+<tr><td>Read anything through the MCP</td><td>the matching <code>*.view</code></td><td>read-only (default)</td></tr>
+<tr><td>Comment on a ticket</td><td><code>ticket.comment</code></td><td>ticket writes</td></tr>
+<tr><td>Change ticket status</td><td><code>ticket.triage</code></td><td>ticket writes</td></tr>
+<tr><td>Raise a ticket</td><td><code>ticket.create</code></td><td>ticket writes</td></tr>
+<tr><td>Change requirement status / criteria</td><td><code>sprint.manage</code></td><td>sprint writes</td></tr>
+<tr><td>Record a test result</td><td><code>testcase.manage</code></td><td>sprint writes</td></tr>
+<tr><td>Push a dev update</td><td>&#8212;</td><td>any link</td></tr>
+</tbody>
+</table></div>
+<p class="section-note" style="margin-top:18px">The link runs as the person who created it. If that person loses access to the project — or is deactivated — the link stops working. Rate limit: 120 requests/minute per link.</p>
+</section>
+
+<section id="ref-trouble">
+<h2><span class="kicker">Reference</span>Troubleshooting</h2>
+<div class="tbl-wrap"><table>
+<thead><tr><th>Symptom</th><th>Cause &amp; fix</th></tr></thead>
+<tbody>
+<tr><td><code>/mcp</code> shows <code>planwise</code> failed to connect</td><td>Token wrong or revoked, or the person it belongs to lost project access. Mint a fresh link (steps&nbsp;2&#8211;3).</td></tr>
+<tr><td>A write tool returns <em>"read-only for &#8230; data"</em></td><td>The link has no write scope. Tick the box on the Claude Code tab and make a new link — scopes are fixed at creation.</td></tr>
+<tr><td>A write tool returns <em>"Permission denied: your account lacks &#8230;"</em></td><td>The link's owner does not have that capability on this project. A Director/Admin grants it, or a different person mints the link.</td></tr>
+<tr><td>Penpot <code>execute_code</code> hangs or errors</td><td>No design file open in the browser, or the MCP bridge dropped. Open the file (step&nbsp;4), then Menu &#8594; MCP server &#8594; Connect (step&nbsp;7).</td></tr>
+<tr><td>Penpot: <code>No userToken found in session context</code></td><td>The <code>penpot</code> URL in <code>.mcp.json</code> is missing <code>?userToken=</code> or has an empty value. Paste a real MCP key (step&nbsp;5).</td></tr>
+<tr><td>Penpot: <code>No plugin instance connected for user token</code></td><td>Key is valid but no editor tab is bridged for it. Open the file and Connect (step&nbsp;7) signed in as the account that owns that key.</td></tr>
+<tr><td>Penpot: <code>MCP key ... has expired</code></td><td>Regenerate it in Settings &#8594; Integrations &#8594; MCP Server, update <code>.mcp.json</code>, restart Claude Code.</td></tr>
+<tr><td>Penpot MCP log: <code>Connection attempt without userToken ... rejecting</code></td><td>The editor Connected before a key existed. Generate the key (step&nbsp;5), then Menu &#8594; MCP server &#8594; Connect again.</td></tr>
+<tr><td>Plugin: <em>"Version mismatch detected"</em></td><td>The MCP server is built for Penpot 2.16.0; this instance is a later 2.16.x. Usually harmless. If a call fails oddly, this is why.</td></tr>
+<tr><td>The Design tab says <em>"not published yet"</em> where the <code>.mcp.json</code> should be</td><td>An admin has not set <code>PENPOT_MCP_URL</code> on the server. Until then, use <code>http://172.16.16.214:9001/mcp/stream</code> directly.</td></tr>
+<tr><td>Audio transcripts have generic <code>SPEAKER_00</code> turns</td><td>Diarization is on its fallback engine — <code>HF_TOKEN</code> is unset or the model gate is not accepted. Admin fixes it on the server.</td></tr>
+</tbody>
+</table></div>
+</section>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Planwise &#215; Claude Code</span>
+    <span>&#183;</span>
+    <span>server 172.16.16.214</span>
+    <span>&#183;</span>
+    <span>schematic recreations, not screenshots</span>
+    <span>&#183;</span>
+    <span>see <code>development_plan.md</code> &amp; <code>REMEDIATION.md</code> for the build record</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var a = document.getElementById('dl');
+  if(!a) return;
+  var FILENAME = 'planwise-claude-code.html';
+  function pageHtml(){
+    return '<!doctype html>\n<html lang="en">\n' + document.documentElement.innerHTML + '\n</html>\n';
+  }
+  // Plain host (a saved copy, any static server): a normal blob download.
+  try{
+    a.href = URL.createObjectURL(new Blob([pageHtml()], {type:'text/html;charset=utf-8'}));
+    a.setAttribute('download', FILENAME);
+  }catch(e){}
+  // Inside the claude.ai viewer, <a download> is inert — route through the downloads capability.
+  var dl = null;
+  if(window.claude && typeof window.claude.use === 'function'){
+    window.claude.use('downloads').then(function(ns){ dl = ns; }).catch(function(){});
+  }
+  a.addEventListener('click', function(ev){
+    if(!dl) return;                 // blob fallback handles it
+    ev.preventDefault();
+    a.setAttribute('aria-busy','true');
+    dl.save({filename:FILENAME, data:pageHtml()}).then(function(){
+      a.removeAttribute('aria-busy');
+    }).catch(function(err){
+      a.removeAttribute('aria-busy');
+      var code = err && err.code;
+      if(code === 'declined' || code === 'rate_limited') return;
+      alert('Could not save the file here. Grab planwise-claude-code.html from the chat, or dev_guid/claude-code-guide.html in the repo.');
+    });
+  });
+})();
+</script>

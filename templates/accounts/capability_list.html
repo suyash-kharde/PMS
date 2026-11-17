@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Capabilities · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Capabilities</h1><p class="muted">Add new permissions at runtime, then grant them on any role.</p></div></div>
+<div class="grid-side">
+  <section class="card table-wrap">
+    <table class="table">
+      <thead><tr><th>Code</th><th>Label</th><th>Category</th><th>Roles</th></tr></thead>
+      <tbody>
+        {% for c in caps %}<tr><td><code>{{ c.code }}</code></td><td>{{ c.label }}</td><td><span class="chip">{{ c.category }}</span></td><td>{{ c.n_roles }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="empty">None defined.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <aside class="card">
+    <header class="card-head"><h2>New capability</h2></header>
+    <form method="post" class="stack-sm">{% csrf_token %}
+      {% for field in form %}<label class="field"><span>{{ field.label }}</span>{{ field }}
+        {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}</label>{% endfor %}
+      <button class="btn btn-primary" type="submit">Add</button>
+    </form>
+    <p class="muted small">Code convention: <code>area.action</code>, e.g. <code>budget.approve</code>. Enforce it in views with <code>require(user, "budget.approve", obj)</code>.</p>
+  </aside>
+</div>
+{% endblock %}

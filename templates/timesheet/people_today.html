@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{% if show == "present" %}Present today{% elif show == "absent" %}Absent today{% elif show == "leave" %}On leave today{% else %}Working today{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="ts-hero ts-hero-slim">
+  <div>
+    <a class="ts-back" href="{% url 'timesheet:week' %}">‹ Timesheet</a>
+    <h1>{% if show == "present" %}Present today{% elif show == "absent" %}Absent today{% elif show == "leave" %}On leave today{% else %}Working today{% endif %}</h1>
+    <p class="muted"><span id="ts-count">{{ rows|length }}</span> of {{ total }} people · {{ day|date:"j M Y" }}</p>
+  </div>
+</div>
+
+<form class="card ts-filters {% if show == "leave" and teams %}ts-filters-two{% else %}ts-filters-one{% endif %}" method="get" onsubmit="return false">
+  <label class="ts-filter-grow"><span>Name</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="search" id="ts-name" placeholder="Search a person…" autocomplete="off" aria-label="Filter by name"></span></label>
+  {% if show == "leave" and teams %}
+  <label><span>Team</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg>
+      <select id="ts-team" aria-label="Filter by team"><option value="">All teams</option>
+        {% for t in teams %}<option value="{{ t|lower }}">{{ t }}</option>{% endfor %}</select></span></label>
+  {% endif %}
+</form>
+
+<section class="card ts-att-card">
+  <div class="ts-scroll">
+    <table class="ts-attt">
+      <thead><tr><th class="ts-num">#</th><th>Person</th>{% if show == "leave" %}<th>Team</th><th>Reports to</th><th class="ts-tcenter">Leave</th>{% else %}<th>First login</th><th>Last logout</th><th class="ts-tcenter">Hours today</th>{% endif %}</tr></thead>
+      <tbody id="ts-list">
+        {% for r in rows %}
+          <tr data-name="{{ r.user.display_name|lower }} {{ r.user.username|lower }}" data-team="{{ r.user.team.name|default:''|lower }}">
+            <td class="ts-num" data-n>{{ forloop.counter }}</td>
+            <td><a class="ts-person-cell" href="{% url 'timesheet:week' %}?user={{ r.user.pk }}&week={{ day|date:'Y-m-d' }}">
+              <span class="ts-av ts-av-solid" style="--c:{% if r.user.role %}{{ r.user.role.color }}{% else %}{{ r.user.color }}{% endif %}">{{ r.user.initials }}</span>
+              <span class="ts-pname"><strong>{{ r.user.display_name }}</strong><small>{% if r.user.title %}{{ r.user.title }}{% elif r.user.role %}{{ r.user.role.name }}{% endif %}</small></span></a></td>
+            {% if show == "leave" %}
+            <td>{% if r.user.team %}{{ r.user.team.name }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{% if r.user.manager %}{{ r.user.manager.display_name }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="ts-tcenter"><span class="ts-st st-leave">On leave</span></td>
+            {% else %}
+            <td>{% if r.first_login %}<strong>{{ r.first_login|time:"H:i" }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{% if r.att.last_logout %}<strong>{{ r.att.last_logout|time:"H:i" }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="ts-tcenter"><strong>{{ r.hours }}h</strong></td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="empty">{% if show == "present" %}No one is present yet today.{% elif show == "absent" %}{% if day.weekday > 4 %}Attendance is not checked on weekends.{% else %}No one is absent today.{% endif %}{% elif show == "leave" %}No one is on leave today.{% else %}No one has hours logged for today yet.{% endif %}</td></tr>
+        {% endfor %}
+        <tr id="ts-none" hidden><td colspan="6" class="empty">{% if show == "leave" %}No one matches your filters.{% else %}No one matches that name.{% endif %}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<script>
+(function () {
+  var box = document.getElementById("ts-name"), team = document.getElementById("ts-team");
+  var rows = document.querySelectorAll("#ts-list tr[data-name]");
+  var none = document.getElementById("ts-none"), count = document.getElementById("ts-count");
+  if (!box) return;
+  function apply() {
+    var q = box.value.trim().toLowerCase(), t = team ? team.value : "", n = 0;
+    rows.forEach(function (tr) {
+      var show = (!q || tr.dataset.name.indexOf(q) !== -1) && (!t || tr.dataset.team === t);
+      tr.hidden = !show;
+      if (show) { n += 1; tr.querySelector("[data-n]").textContent = n; }
+    });
+    count.textContent = n;
+    none.hidden = n !== 0 || rows.length === 0;
+  }
+  box.addEventListener("input", apply);
+  if (team) team.addEventListener("change", apply);
+})();
+</script>
+{% endblock %}

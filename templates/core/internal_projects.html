@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Internal projects · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'core:dashboard' %}">Dashboard</a> / Internal projects</p>
+    <h1>Internal projects</h1>
+    <p class="muted">Projects with no customer assigned.</p>
+  </div>
+</div>
+
+<section class="card">
+  <ul class="list">
+    {% for p in projects %}
+      <li class="list-row"><span class="dot" style="--c:{{ p.color }}"></span>
+        <a class="grow" href="{{ p.get_absolute_url }}"><strong>{{ p.key }}</strong> {{ p.name }}</a>
+        <span class="progress-mini"><i style="width:{{ p.progress }}%"></i></span>
+        <span class="badge badge-{{ p.status }}">{{ p.get_status_display }}</span></li>
+    {% empty %}<li class="empty">No internal projects.</li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}

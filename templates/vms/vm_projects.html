@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Projects on {{ vm.name }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'vms:vm_list' %}">VMs</a> / {{ vm.name }}</p>
+    <h1>Projects on {{ vm.name }}</h1>
+    <p class="muted">{{ vm.host }}{% if vm.os %} · {{ vm.os }}{% endif %}</p>
+  </div>
+</div>
+
+<section class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Project</th><th>Folder path</th><th>Git repo</th></tr></thead>
+    <tbody>
+      {% for link in links %}
+        <tr>
+          <td><a href="{% url 'vms:vm_project_detail' vm.pk link.project.pk %}">{{ link.project.key }} · {{ link.project.name }}</a></td>
+          <td><code>{{ link.folder_path|default:"—" }}</code></td>
+          <td class="muted small">{% if link.git_repo_url %}{{ link.git_repo_url }} @ {{ link.git_branch|default:"main" }}{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="3" class="empty">No projects on this VM yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Permissions · {{ person.display_name }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<style>
+  .perm-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
+  .perm-sum div{padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+  .perm-sum strong{display:block;font-size:22px;line-height:1.1}
+  .perm-sum span{font-size:12.5px;color:var(--muted)}
+  .perm-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)}
+  .perm-tools input[type=search]{flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--text)}
+  .perm-tools label{font-size:13px;display:flex;gap:6px;align-items:center;color:var(--muted)}
+  .perm-group{padding:8px 14px;background:var(--surface-2);text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:var(--muted);font-weight:700}
+  .perm-list{list-style:none;margin:0;padding:0}
+  .perm-row{display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border)}
+  .perm-row input[type=checkbox]{width:18px;height:18px;flex:none;cursor:pointer;accent-color:var(--primary)}
+  .perm-row label.perm-main{flex:1;min-width:0;cursor:pointer}
+  .perm-row code{font-size:12.5px}
+  .perm-row small{display:block;color:var(--muted)}
+  .perm-row.is-changed{background:color-mix(in srgb,var(--primary) 8%,transparent)}
+  .perm-row select{padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--text)}
+  .perm-src{flex:none;min-width:150px;text-align:right;font-size:12px;color:var(--muted)}
+  .perm-tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .perm-tag.t-added{background:color-mix(in srgb,var(--success) 18%,transparent);color:var(--success)}
+  .perm-tag.t-revoked{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+  .perm-tag.t-limits{background:color-mix(in srgb,var(--warn) 22%,transparent);color:#b45309}
+  .perm-row.is-pending-add .perm-src::after{content:"will be added";color:var(--success);font-weight:700}
+  .perm-row.is-pending-revoke .perm-src::after{content:"will be revoked";color:var(--danger);font-weight:700}
+  .perm-bar{position:sticky;bottom:0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--border);background:var(--surface)}
+</style>
+
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'accounts:user_list' %}">People</a> / <a href="{% url 'accounts:user_detail' person.pk %}">{{ person.display_name }}</a></p>
+    <h1>Permissions · {{ person.display_name }}</h1>
+    <p class="muted">Ticked = {{ person.display_name }} can do it. {% if person.role %}The <strong>{{ person.role.name }}</strong> role already ticks the base set.{% endif %}
+      Tick another box to add a permission for this person only; untick a role permission to take it away from them only.</p>
+  </div>
+  <div class="row-actions"><a class="btn btn-ghost" href="{% url 'accounts:user_detail' person.pk %}">Back to profile</a></div>
+</div>
+
+{% if person.is_superuser %}
+  <div class="alert alert-warning">{{ person.display_name }} is a superuser, who holds every permission regardless of anything set here.</div>
+{% endif %}
+
+<div class="perm-sum">
+  <div><strong>{{ stats.effective }}</strong><span>can do in total</span></div>
+  <div><strong>{{ stats.role }}</strong><span>from the role</span></div>
+  <div><strong>{{ stats.added }}</strong><span>added for this person</span></div>
+  <div><strong>{{ stats.revoked }}</strong><span>revoked for this person</span></div>
+  {% if stats.limits %}<div><strong>{{ stats.limits }}</strong><span>older limits</span></div>{% endif %}
+</div>
+
+<form method="post" class="card" id="perm-form" style="padding:0;overflow:hidden">
+  {% csrf_token %}
+  <div class="perm-tools">
+    <input type="search" id="perm-q" placeholder="Search permissions (e.g. ticket, project.edit)…" aria-label="Search permissions">
+    <label><input type="checkbox" id="perm-only"> Only show ones set for this person</label>
+  </div>
+
+  {% regroup rows by category as groups %}
+  {% for group in groups %}
+    <div class="perm-block">
+      <div class="perm-group">{{ group.grouper }}</div>
+      <ul class="perm-list">
+        {% for r in group.list %}
+          <li class="perm-row" data-search="{{ r.cap.code }} {{ r.cap.label }}" data-set="{% if r.kind == 'added' or r.kind == 'revoked' or r.kind == 'limits' %}1{% endif %}"
+              data-role="{{ r.role|default:'' }}" data-orig="{% if r.checked %}1{% else %}0{% endif %}">
+            <input type="hidden" name="seen" value="{{ r.cap.pk }}">
+            <input type="checkbox" id="has_{{ r.cap.pk }}" name="has_{{ r.cap.pk }}" {% if r.checked %}checked{% endif %}>
+            <label class="perm-main" for="has_{{ r.cap.pk }}"><code>{{ r.cap.code }}</code><small>{{ r.cap.label }}</small></label>
+            <span class="perm-src">
+              {% if r.kind == "added" %}<span class="perm-tag t-added">added for them</span>
+              {% elif r.kind == "revoked" %}<span class="perm-tag t-revoked">revoked for them</span>
+              {% elif r.kind == "limits" %}<span class="perm-tag t-limits" title="An older override narrows what the role gives. Pick “Role default” to remove it.">limited</span>
+              {% elif r.role %}via role{% endif %}
+            </span>
+            {% if r.show_scope %}
+              <select name="scope_{{ r.cap.pk }}" aria-label="Scope for {{ r.cap.code }}" data-orig="{{ r.scope_value }}" {% if not r.checked %}hidden{% endif %}
+                      title="How far this reaches: own = their own records, team = their team and reports, all = everything">
+                {% if r.role %}<option value="" {% if not r.scope_value %}selected{% endif %}>Role default ({{ r.role }})</option>{% endif %}
+                {% for opt in r.scope_options %}<option value="{{ opt }}" {% if r.scope_value == opt %}selected{% endif %}>{{ opt|capfirst }}</option>{% endfor %}
+              </select>
+            {% elif r.effective %}
+              <span class="scope scope-{{ r.effective }}" title="Scope from the role">{{ r.effective }}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endfor %}
+
+  <div class="perm-bar">
+    <button class="btn btn-primary" type="submit" id="perm-save" disabled>Save changes</button>
+    <a class="btn btn-ghost" href="{% url 'accounts:user_detail' person.pk %}">Cancel</a>
+    <span class="muted small" id="perm-count">No changes yet</span>
+    <span class="muted small" style="margin-left:auto">Scope: own = their own records · team = their team &amp; reports · all = everything</span>
+  </div>
+</form>
+
+<script>
+(function () {
+  var form = document.getElementById("perm-form");
+  var q = document.getElementById("perm-q"), only = document.getElementById("perm-only");
+  var save = document.getElementById("perm-save"), count = document.getElementById("perm-count");
+  var rows = Array.prototype.slice.call(form.querySelectorAll(".perm-row"));
+  function filter() {
+    var term = q.value.trim().toLowerCase();
+    rows.forEach(function (li) {
+      var hit = (!term || li.dataset.search.toLowerCase().indexOf(term) !== -1) && (!only.checked || li.dataset.set === "1");
+      li.hidden = !hit;
+    });
+    form.querySelectorAll(".perm-block").forEach(function (b) { b.hidden = !b.querySelector(".perm-row:not([hidden])"); });
+  }
+  function dirty() {
+    var n = 0;
+    rows.forEach(function (li) {
+      var box = li.querySelector("input[type=checkbox]"), sel = li.querySelector("select");
+      var changed = (box.checked ? "1" : "0") !== li.dataset.orig || (box.checked && sel && sel.value !== sel.dataset.orig);
+      if (sel) sel.hidden = !box.checked;
+      li.classList.toggle("is-changed", changed);
+      li.classList.toggle("is-pending-add", changed && box.checked && li.dataset.orig === "0");
+      li.classList.toggle("is-pending-revoke", changed && !box.checked && li.dataset.orig === "1");
+      if (changed) n++;
+    });
+    save.disabled = n === 0;
+    count.textContent = n ? n + " unsaved change" + (n === 1 ? "" : "s") : "No changes yet";
+    return n;
+  }
+  q.addEventListener("input", filter);
+  only.addEventListener("change", filter);
+  form.addEventListener("change", dirty);
+  function warn(e) { if (dirty()) { e.preventDefault(); e.returnValue = ""; } }
+  form.addEventListener("submit", function () { window.removeEventListener("beforeunload", warn); });
+  window.addEventListener("beforeunload", warn);
+  dirty();
+})();
+</script>
+{% endblock %}

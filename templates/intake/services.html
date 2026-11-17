@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Model services · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Model services</h1><p class="muted">Live health of the LLM and the two audio services.</p></div></div>
+
+<div class="grid-3">
+  <section class="card">
+    <header class="card-head"><h2>LLM · BRD writer</h2>
+      <span class="badge {% if llm.ok %}badge-active{% else %}badge-cancelled{% endif %}">{{ llm.ok|yesno:"up,down" }}</span></header>
+    <dl class="kv">
+      <dt>Endpoint</dt><dd><code>{{ llm.endpoint }}</code></dd>
+      <dt>Model</dt><dd><code>{{ llm.model }}</code></dd>
+      <dt>Status</dt><dd>{% firstof llm.status llm.error "—" %}</dd>
+    </dl>
+  </section>
+
+  <section class="card">
+    <header class="card-head"><h2>Noise reduction</h2>
+      <span class="badge {% if audio.denoise.ok %}badge-active{% else %}badge-cancelled{% endif %}">{{ audio.denoise.ok|yesno:"up,down" }}</span></header>
+    <dl class="kv">
+      <dt>Endpoint</dt><dd><code>{{ config.DENOISE_URL }}</code></dd>
+      <dt>Model</dt><dd><code>{{ config.DENOISE_MODEL }}</code></dd>
+      <dt>Engine</dt><dd><code>{% firstof audio.denoise.engine "—" %}</code></dd>
+      <dt>Load error</dt><dd class="small">{% firstof audio.denoise.load_error audio.denoise.error "—" %}</dd>
+    </dl>
+  </section>
+
+  <section class="card">
+    <header class="card-head"><h2>Speech to text</h2>
+      <span class="badge {% if audio.asr.ok %}badge-active{% else %}badge-cancelled{% endif %}">{{ audio.asr.ok|yesno:"up,down" }}</span></header>
+    <dl class="kv">
+      <dt>Service</dt><dd><code>{{ config.ASR_URL }}</code></dd>
+      <dt>Model</dt><dd><code>{{ config.ASR_MODEL }}</code></dd>
+      <dt>Endpoint</dt><dd><code>{% firstof audio.asr.asr.endpoint "—" %}</code></dd>
+      <dt>Backend</dt><dd><code>{% firstof audio.asr.asr.backend "—" %}</code></dd>
+      <dt>Reachable</dt><dd>{% firstof audio.asr.asr.reachable "not called yet" %}</dd>
+      <dt>Last error</dt><dd class="small">{% firstof audio.asr.asr.error audio.asr.error "—" %}</dd>
+    </dl>
+    <p class="muted small">Multi-language. Audio is sliced per speaker turn, each turn transcribed on its own.</p>
+  </section>
+
+  <section class="card">
+    <header class="card-head"><h2>Speaker diarization</h2>
+      <span class="badge {% if audio.asr.diarization.engine == 'nemo' %}badge-active{% else %}badge-planning{% endif %}">
+        {% firstof audio.asr.diarization.engine "—" %}</span></header>
+    <dl class="kv">
+      <dt>Model</dt><dd><code>{% firstof audio.asr.diarization.model config.DIAR_MODEL %}</code></dd>
+      <dt>Runs</dt><dd>locally in the <code>asr</code> container</dd>
+      <dt>Device</dt><dd><code>{% firstof audio.asr.diarization.device "—" %}</code></dd>
+      <dt>HF token</dt><dd>{% firstof audio.asr.diarization.token "—" %}</dd>
+      <dt>Load error</dt><dd class="small">{% firstof audio.asr.diarization.error "—" %}</dd>
+    </dl>
+    <p class="muted small">
+      The only model running locally. Decides who spoke when; it never transcribes.
+      Gated on Hugging Face — the read token comes from the diarization row on the
+      <a class="link" href="{% url 'aimodels:list' %}">AI models</a> page.
+    </p>
+  </section>
+</div>
+
+<section class="card">
+  <header class="card-head"><h2>Switching to the real weights</h2></header>
+  <p class="muted small">
+    Both audio services expose OpenAI-compatible routes and start in a fallback engine when the
+    model stack is not installed. Set <code>INSTALL_HUSH=1</code> and/or <code>INSTALL_NEMO=1</code>
+    in <code>.env</code>, then rebuild: <code>docker compose build denoise asr &amp;&amp; docker compose up -d</code>.
+    Weights are cached in the <code>hfcache</code> volume.
+  </p>
+</section>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load humanize static %}
+{% block title %}My tickets · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>My tickets</h1></div>
+  <div class="row-actions"><a class="btn" href="{% url 'tickets:list' %}">All tickets</a></div>
+</div>
+
+{% for group in groups %}
+  <section class="section-head"><h2>{{ group.label }} · {{ group.rows|length }}</h2></section>
+  <div class="card table-wrap">
+    <table class="table">
+      <thead><tr><th>Key</th><th>Type</th><th>Title</th><th>Status</th><th>Priority</th><th>Project</th><th>Raised by</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for t in group.rows %}{% include "tickets/_ticket_row.html" with t=t %}
+        {% empty %}<tr><td colspan="9" class="empty">Nothing here.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endfor %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/info-pop.js' %}"></script>{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load humanize perms %}
+{% block title %}{{ sprint.key }} · {{ sprint.name }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'projects:list' %}">Projects</a> /
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'sprints:sprint_list' %}?project={{ project.pk }}">Sprints</a> / {{ sprint.key }}
+    </p>
+    <h1>{{ sprint.name }}</h1>
+    <p class="muted">
+      <span class="pill sp-status-{{ sprint.status }}">{{ sprint.get_status_display }}</span>
+      · {{ sprint.start_date|date:"d M Y"|default:"no start" }} → {{ sprint.end_date|date:"d M Y"|default:"no end" }}
+      · {{ sprint.requirement_count }} requirement(s) · {{ sprint.points_committed }}{% if sprint.capacity_points %} / {{ sprint.capacity_points }}{% endif %} pts
+      {% if sprint.owner %}· owner {{ sprint.owner.display_name }}{% endif %}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if can_manage %}
+      <a class="btn btn-primary" href="{% url 'sprints:requirement_create' sprint.pk %}">+ Requirement</a>
+      <a class="btn" href="{% url 'sprints:sprint_edit' sprint.pk %}">Edit</a>
+      <form method="post" action="{% url 'sprints:sprint_delete' sprint.pk %}" data-confirm="Delete {{ sprint.key }}? Requirements move to the backlog.">{% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+{% include "_project_tabs.html" %}
+
+{% if sprint.goal %}<div class="card"><header class="card-head"><h2>Goal</h2></header><p class="prose">{{ sprint.goal|linebreaksbr }}</p></div>{% endif %}
+
+{% if can_manage %}
+<form method="post" action="{% url 'sprints:sprint_transition' sprint.pk %}" class="inline-form" style="margin:10px 0">
+  {% csrf_token %}
+  <label class="muted small">Sprint status
+    <select name="status" onchange="this.form.submit()">
+      {% for value, label in status_choices %}<option value="{{ value }}" {% if value == sprint.status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+</form>
+{% endif %}
+
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Key</th><th>Requirement</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Criteria</th><th>Tests</th><th>Pts</th></tr></thead>
+    <tbody>
+      {% for col in columns %}
+        {% for r in col.rows %}
+          <tr>
+            <td><a href="{{ r.get_absolute_url }}">{{ r.key }}</a></td>
+            <td><a class="grow" href="{{ r.get_absolute_url }}">{{ r.title }}</a></td>
+            <td><span class="pill rq-status-{{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td><span class="prio prio-{{ r.priority }}"></span> {{ r.get_priority_display }}</td>
+            <td>{% if r.assignee %}{{ r.assignee.display_name }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="muted small">{% with m=r.criteria_met %}{{ m.0 }}/{{ m.1 }} met{% endwith %}</td>
+            <td class="muted small">{% with t=r.test_summary %}{{ t.passed }}✓ {{ t.failed }}✗ / {{ t.total }}{% endwith %}</td>
+            <td>{{ r.estimate_points }}</td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+      {% if not sprint.requirement_count %}
+        <tr><td colspan="8" class="empty">No requirements in this sprint yet.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div class="grid-side">
+  <section class="card">
+    <header class="card-head"><h2>Risks · {{ risks|length }}</h2></header>
+    <ul class="list">
+      {% for risk in risks %}
+        <li class="list-row">
+          <span class="pill risk-{{ risk.severity }}">{{ risk.get_likelihood_display }}×{{ risk.get_impact_display }}</span>
+          <a class="grow" href="{{ risk.requirement.get_absolute_url }}">{{ risk.title }}</a>
+          <span class="muted small">{{ risk.requirement.key }} · {{ risk.get_status_display }}</span>
+        </li>
+      {% empty %}<li class="empty">No risks recorded.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="card">
+    <header class="card-head"><h2>Open dependencies · {{ open_dependencies|length }}</h2></header>
+    <ul class="list">
+      {% for dep in open_dependencies %}
+        <li class="list-row">
+          <span class="pill">{{ dep.get_kind_display }}</span>
+          <a class="grow" href="{{ dep.requirement.get_absolute_url }}">{{ dep.title }}</a>
+          <span class="muted small {% if dep.is_overdue %}err{% endif %}">
+            {{ dep.get_status_display }}{% if dep.due_date %} · due {{ dep.due_date|date:"d M" }}{% endif %}
+          </span>
+        </li>
+      {% empty %}<li class="empty">No open dependencies.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

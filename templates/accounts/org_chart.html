@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Hierarchy · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Hierarchy</h1><p class="muted">Reporting line, team structure and role inheritance.</p></div>
+  <div class="segmented" id="orgSwitch">
+    <a class="on" data-view="people" href="#">People</a>
+    <a data-view="teams" href="#">Teams</a>
+    <a data-view="roles" href="#">Roles</a>
+  </div>
+</div>
+<section class="card org-wrap">
+  <p class="org-hint muted small">Click ▸ to expand or collapse a branch</p>
+  <div id="orgViewport" class="org-viewport">
+    <div id="orgChart" class="org" data-people="{{ nodes }}" data-teams="{{ teams }}" data-roles="{{ roles }}"></div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/org.js' %}"></script>{% endblock %}

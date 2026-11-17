@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Notifications · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Notifications</h1><p class="muted">{{ unread }} unread</p></div>
+  <form method="post" action="{% url 'notify:mark_all_read' %}">{% csrf_token %}
+    <button class="btn" type="submit">Mark all read</button></form>
+</div>
+
+<div class="grid-side">
+  <section class="card">
+    <ul class="list">
+      {% for n in notifications %}
+        <li class="list-row {% if not n.is_read %}unread{% endif %}">
+          <span class="dot" style="--c:{% if n.kind == 'entry_failed' %}#e11d48{% elif n.kind == 'brd_updated' %}#6366f1{% elif n.kind == 'speakers_needed' %}#f59e0b{% else %}#22c55e{% endif %}"></span>
+          {% if not n.is_read %}
+            <form method="post" action="{% url 'notify:mark_read' n.pk %}" class="grow"
+                  data-notification-open data-url="{{ n.url }}">{% csrf_token %}
+              <input type="hidden" name="open" value="1">
+              <button type="submit" class="row-link-btn">
+                <strong>{{ n.title }}</strong>
+                {% if n.body %}<small class="muted block">{{ n.body }}</small>{% endif %}
+              </button>
+            </form>
+          {% else %}
+            <a class="grow" href="{{ n.url|default:'#' }}" data-notification-open data-url="{{ n.url }}">
+              <strong>{{ n.title }}</strong>
+              {% if n.body %}<small class="muted block">{{ n.body }}</small>{% endif %}
+            </a>
+          {% endif %}
+          <span class="muted small">{{ n.created_at|date:"d M Y, H:i" }}</span>
+          {% if n.pushed %}<span class="chip" style="--c:#22c55e" title="Delivered as a push notification">push</span>
+          {% elif n.push_error %}<span class="chip" style="--c:#f59e0b" title="{{ n.push_error }}">no push</span>{% endif %}
+          {% if not n.is_read %}
+            <form method="post" action="{% url 'notify:mark_read' n.pk %}" data-notification-mark-only>{% csrf_token %}
+              <button class="icon-btn" type="submit" title="Mark read">✓</button></form>
+          {% endif %}
+        </li>
+      {% empty %}<li class="empty">Nothing yet.</li>{% endfor %}
+    </ul>
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <header class="card-head"><h2>Push notifications</h2></header>
+      {% if not vapid_ready %}
+        <div class="alert alert-error">No VAPID key on the server — push is disabled.</div>
+      {% endif %}
+      <p class="muted small">
+        Get alerted when a recording finishes processing, when speakers need naming and when the
+        BRD is rewritten — even with this tab closed.
+      </p>
+      <div class="stack-sm">
+        <button class="btn btn-primary" id="pushToggle" type="button">Enable push on this device</button>
+        <button class="btn" id="pushTest" type="button">Send a test notification</button>
+      </div>
+      <p class="push-status" id="pushStatus"></p>
+      <p class="muted small">
+        Requires HTTPS. This stack serves <code>https://localhost:{{ HTTPS_PORT }}</code> with a
+        self-signed certificate — accept the browser warning once. Plain
+        <code>http://localhost:8000</code> also works, because browsers treat localhost as secure.
+      </p>
+    </section>
+
+    <section class="card">
+      <header class="card-head"><h2>Subscribed devices</h2></header>
+      <ul class="list">
+        {% for s in subscriptions %}
+          <li class="list-row">
+            <span class="grow small">{{ s.user_agent|truncatechars:60|default:"unknown device" }}</span>
+            <span class="muted small">{{ s.created_at|date:"d M Y, H:i" }}</span>
+          </li>
+        {% empty %}<li class="empty">No devices subscribed.</li>{% endfor %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'js/push.js' %}"></script>
+  <script src="{% static 'js/notifications.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}BRD history · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'intake:brd' project.pk %}">BRD</a> / History</p>
+    <h1>Version history</h1>
+    <p class="muted">Every revision is immutable — the document is rebuilt, never overwritten.</p>
+  </div>
+</div>
+
+{% include "intake/_project_tabs.html" %}
+
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Version</th><th>When</th><th>By</th><th>Source</th><th>Summary</th><th>Change</th><th>Model</th><th></th></tr></thead>
+    <tbody>
+      {% for v in versions %}
+        <tr>
+          <td><a href="{% url 'intake:brd' project.pk %}?v={{ v.number }}"><strong>v{{ v.number }}</strong></a></td>
+          <td>{{ v.created_at|date:"d M Y H:i" }}</td>
+          <td>{{ v.created_by.display_name|default:"system" }}</td>
+          <td>{% if v.source_entry %}<a href="{{ v.source_entry.get_absolute_url }}">{{ v.source_entry.title }}</a>{% else %}—{% endif %}</td>
+          <td class="clamp-3">{{ v.summary }}</td>
+          <td><span class="add">+{{ v.stats.added }}</span> <span class="del">-{{ v.stats.removed }}</span></td>
+          <td><code class="muted">{{ v.model_name|default:"—" }}</code></td>
+          <td><a class="link" href="{% url 'intake:brd_download_version' project.pk v.number %}">.md</a></td>
+        </tr>
+      {% empty %}<tr><td colspan="8" class="empty">No versions yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<section class="card">
+  <header class="card-head">
+    <h2>Compare revisions</h2>
+    <form class="filters" method="get" style="padding:0;border:0;background:transparent">
+      <select name="a">{% for v in versions %}<option value="{{ v.number }}" {% if left and left.number == v.number %}selected{% endif %}>v{{ v.number }}</option>{% endfor %}</select>
+      <span class="muted">→</span>
+      <select name="b">{% for v in versions %}<option value="{{ v.number }}" {% if right and right.number == v.number %}selected{% endif %}>v{{ v.number }}</option>{% endfor %}</select>
+      <button class="btn" type="submit">Compare</button>
+    </form>
+  </header>
+  {% if diff_lines %}
+    <pre class="diff">{% for line in diff_lines %}<span class="{% if line|slice:':3' == '+++' or line|slice:':3' == '---' %}meta{% elif line|slice:':2' == '@@' %}hunk{% elif line|slice:':1' == '+' %}add{% elif line|slice:':1' == '-' %}del{% endif %}">{{ line }}</span>
+{% endfor %}</pre>
+  {% else %}
+    <p class="empty">Nothing to compare yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

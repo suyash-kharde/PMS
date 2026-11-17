@@ -1,0 +1,11 @@
+{% comment %}Ticket cards: every ticket this person may see, whatever the filters. Clicking one filters the list.{% endcomment %}
+{% with base=request.path today_iso=today|date:"Y-m-d" %}
+<div class="stat-grid tkt-kpis">
+  <a class="stat{% if f_status == 'all' and f_date_from == today_iso and f_date_to == today_iso %} is-active{% endif %}" href="{{ base }}?view={{ view_mode }}&status=all&date_from={{ today_iso }}&date_to={{ today_iso }}"><span class="stat-label">Raised today</span><strong>{{ kpis.raised_today }}</strong></a>
+  <a class="stat{% if f_resolved == 'today' %} is-active{% endif %}" href="{{ base }}?view={{ view_mode }}&status=all&resolved=today"><span class="stat-label">Resolved today</span><strong>{{ kpis.resolved_today }}</strong></a>
+  <a class="stat" href="{{ base }}?view={{ view_mode }}&status=open"><span class="stat-label">Pending</span><strong>{{ kpis.pending }}</strong></a>
+  <a class="stat{% if f_assignee == 'none' %} is-active{% endif %}" href="{{ base }}?view={{ view_mode }}&status=open&assignee=none"><span class="stat-label">Unassigned</span><strong>{{ kpis.unassigned }}</strong></a>
+  <a class="stat{% if f_status == 'in_progress' %} is-active{% endif %}" href="{{ base }}?view={{ view_mode }}&status=in_progress"><span class="stat-label">In progress</span><strong>{{ kpis.in_progress }}</strong></a>
+  <a class="stat{% if f_status == 'blocked' %} is-active{% endif %}" href="{{ base }}?view={{ view_mode }}&status=blocked"><span class="stat-label">Blocked</span><strong>{{ kpis.blocked }}</strong></a>
+</div>
+{% endwith %}

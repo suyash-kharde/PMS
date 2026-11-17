@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Enter login code · {{ APP_NAME }}{% endblock %}
+{% block auth %}
+<div class="login-hero" style="background-image:url('{% static 'img/Login.png' %}')">
+  <div class="login-hero-inner">
+    <div class="login-hero-content">
+      <div class="login-visual-brand"><span class="brand-mark">P</span> {{ APP_NAME }}</div>
+      <h1 class="login-hero-title">Work Smarter<br>with <span class="grad-text">{{ APP_NAME }}</span></h1>
+      <p class="login-hero-sub">A simpler way to stay organized<br>and get things done.</p>
+      <span class="login-hero-accent" aria-hidden="true"></span>
+    </div>
+
+    <div class="login-card-float">
+      <div class="login-form-brand"><span class="brand-mark-lg">P</span><h1>Check your email</h1>
+        <p class="muted small">We sent a 6-digit login code to <strong>{{ masked }}</strong>. It expires in {{ ttl_minutes }} minutes.</p></div>
+
+      <form method="post" class="login-form" autocomplete="off">
+        {% csrf_token %}
+        {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+        {% if notice %}<div class="alert alert-success">{{ notice }}</div>{% endif %}
+        <label class="field"><span>Login code</span>
+          <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 pattern="[0-9]{6}" placeholder="123456" required autofocus
+                 style="letter-spacing:6px;font-size:20px;text-align:center">
+        </label>
+        <button class="btn btn-primary btn-block login-submit" type="submit">Verify and sign in <span aria-hidden="true">→</span></button>
+      </form>
+      <form method="post" style="margin-top:10px;text-align:center">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="resend">
+        <button class="btn btn-ghost btn-sm" type="submit">Send a new code</button>
+      </form>
+      <p class="auth-alt"><a href="{% url 'accounts:login' %}">Back to sign in</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

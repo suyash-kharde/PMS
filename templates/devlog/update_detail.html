@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ u.headline }} · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'devlog:project_log' project.pk %}">Dev Log</a> / Update
+    </p>
+    <h1>{{ u.headline }}</h1>
+    <p class="muted">
+      <span class="chip">{{ u.get_kind_display }}</span>
+      <span class="dl-status dl-status-{{ u.status }}">{{ u.get_status_display }}</span>
+      {% if u.milestone %}· milestone <strong>{{ u.milestone }}</strong>{% if u.milestone_done %} ✓ complete{% endif %}{% endif %}
+      · {{ u.created_by.display_name|default:"Claude Code" }}{% if u.source == 'mcp' %} via MCP{% endif %}
+      · {{ u.created_at|date:"d M Y, H:i" }}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if can_manage %}
+      <a class="btn" href="{% url 'devlog:update_edit' u.pk %}">Edit</a>
+      <form method="post" action="{% url 'devlog:update_delete' u.pk %}" data-confirm="Delete this update?">{% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <dl class="kv kv-wide">
+    <dt>Milestone</dt><dd>{{ u.milestone|default:"—" }}{% if u.milestone_done %} <span class="badge badge-completed">done</span>{% endif %}</dd>
+    <dt>Linked</dt><dd>{% for label, url in u.links %}<a href="{{ url }}">{{ label }}</a>{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</dd>
+    <dt>Files changed</dt><dd>{% for f in u.files_changed %}<code>{{ f }}</code>{% if not forloop.last %}<br>{% endif %}{% empty %}—{% endfor %}</dd>
+    <dt>Branch</dt><dd>{{ u.branch|default:"—" }}</dd>
+    <dt>Commit</dt><dd>{{ u.commit|default:"—" }}</dd>
+    <dt>Pull request</dt><dd>{% if u.pr_url %}<a href="{{ u.pr_url }}">{{ u.pr_url }}</a>{% else %}—{% endif %}</dd>
+    <dt>Source</dt><dd>{{ u.get_source_display }}{% if u.via_token %} ({{ u.via_token.token_prefix }}…){% endif %}</dd>
+  </dl>
+</div>
+
+{% if details_html %}
+  <section class="card">
+    <article class="prose markdown">{{ details_html|safe }}</article>
+  </section>
+{% endif %}
+{% endblock %}

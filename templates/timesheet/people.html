@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Team timesheet · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="ts-hero ts-hero-slim ts-hero-week">
+  <div>
+    <h1>Team timesheet</h1>
+  </div>
+  <div class="ts-weeknav">
+    <form class="ts-daynav" method="get">
+      {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}{% if person %}<input type="hidden" name="person" value="{{ person }}">{% endif %}
+      {% if project_id %}<input type="hidden" name="project" value="{{ project_id }}">{% endif %}{% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+      <a class="ts-nav-btn" href="?week={{ prev|date:'Y-m-d' }}&q={{ q }}&person={{ person }}&project={{ project_id }}&status={{ status }}" aria-label="Previous week">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+      <label class="ts-daychip ts-rangechip" title="Jump to a week">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span><strong>{{ monday|date:"d M" }} – {{ data.days.6.date|date:"d M Y" }}</strong></span>
+        <input type="date" name="week" value="{{ monday|date:'Y-m-d' }}" onchange="this.form.submit()" onclick="this.showPicker&&this.showPicker()" aria-label="Pick any day of the week">
+      </label>
+      <a class="ts-nav-btn" href="?week={{ next|date:'Y-m-d' }}&q={{ q }}&person={{ person }}&project={{ project_id }}&status={{ status }}" aria-label="Next week">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></a>
+    </form>
+    <details class="ts-kebab ts-weekmenu">
+      <summary class="btn btn-primary ts-weekbtn">This week
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="ts-menu">
+        <a href="?week={{ this_week|date:'Y-m-d' }}">This week</a>
+        <a href="?week={{ last_week|date:'Y-m-d' }}">Last week</a>
+        <a href="?week={{ next_week|date:'Y-m-d' }}">Next week</a>
+      </div>
+    </details>
+  </div>
+</div>
+{% include "timesheet/_tabs.html" %}
+
+<form class="card ts-filters" method="get">
+  <label><span>Date range</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <input type="date" name="week" value="{{ monday|date:'Y-m-d' }}" aria-label="Week" onchange="this.form.submit()"></span></label>
+  <label><span>Person</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+      <select name="person" onchange="this.form.submit()"><option value="">All people</option>
+        {% for p in scope %}<option value="{{ p.pk }}" {% if person == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.display_name }}</option>{% endfor %}</select></span></label>
+  <label><span>Project</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <select name="project" onchange="this.form.submit()"><option value="">All projects</option>
+        {% for p in projects %}<option value="{{ p.pk }}" {% if project_id == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.key }} – {{ p.name }}</option>{% endfor %}</select></span></label>
+  <label><span>Status</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <select name="status" onchange="this.form.submit()">
+        <option value="">All status</option>
+        <option value="submitted" {% if status == "submitted" %}selected{% endif %}>Fully submitted</option>
+        <option value="pending" {% if status == "pending" %}selected{% endif %}>Not fully submitted</option>
+        <option value="absent" {% if status == "absent" %}selected{% endif %}>Has absent days</option>
+      </select></span></label>
+  <label class="ts-filter-grow"><span>Search</span>
+    <span class="ts-field ts-field-sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search a person…"></span></label>
+</form>
+
+<section class="card ts-att-card">
+  <div class="ts-scroll">
+    <table class="ts-attt ts-team">
+      <thead>
+        <tr>
+          <th class="ts-num">#</th><th>Person</th>
+          {% for d in data.days %}
+            <th class="ts-tday ts-{{ d.kind }}{% if d.is_today %} is-today{% endif %}" title="{{ d.holiday_label }}">
+              <span>{{ d.date|date:"D" }}</span><small>{{ d.date|date:"d M" }}</small></th>
+          {% endfor %}
+          <th class="ts-tcenter">Total</th><th>Submitted</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in page %}
+          <tr>
+            <td class="ts-num">{{ forloop.counter|add:offset }}</td>
+            <td><a class="ts-person-cell" href="{% url 'timesheet:week' %}?user={{ r.user.pk }}&week={{ monday|date:'Y-m-d' }}">
+              <span class="ts-av ts-av-solid" style="--c:{{ r.user.role.color|default:r.user.color }}">{{ r.user.initials }}</span>
+              <span class="ts-pname"><strong>{{ r.user.display_name }}</strong><small>{% if r.user.title %}{{ r.user.title }}{% elif r.user.role %}{{ r.user.role.name }}{% endif %}</small></span></a></td>
+            {% for c in r.cells %}
+              <td class="ts-tcenter ts-{{ c.kind }}{% if c.date == data.today %} is-today{% endif %}">
+                {% if c.leave >= 8 %}<span class="ts-tbox is-leave" title="Leave (full day)">L</span>
+                {% elif c.absent %}<span class="ts-tbox is-abs" title="Absent">A</span>
+                {% elif c.future and not c.hours %}<span class="ts-tbox is-empty">-</span>
+                {% elif c.kind != "workday" and not c.hours %}<span class="ts-tbox is-empty">-</span>
+                {% else %}<span class="ts-tbox"{% if c.leave %} title="+ {{ c.leave }}h leave"{% endif %}>{{ c.hours }}{% if c.leave %}<sup class="ts-lsup">L</sup>{% endif %}</span>{% endif %}
+              </td>
+            {% endfor %}
+            <td class="ts-tcenter"><strong>{{ r.total }}h</strong></td>
+            <td><span class="ts-subw"><span class="ts-subn">{{ r.submitted_work }}/{{ r.workdays }}</span>
+              <span class="ts-bar"><i style="width:{{ r.submitted_pct }}%"></i></span></span></td>
+          </tr>
+        {% empty %}<tr><td colspan="11" class="empty">No one matches.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <footer class="ts-pager">
+    <span class="muted small">Showing {% if page.paginator.count %}{{ page.start_index }}–{{ page.end_index }}{% else %}0{% endif %} of {{ page.paginator.count }} people</span>
+    {% if page.paginator.num_pages > 1 %}
+      <nav class="ts-pages">
+        {% if page.has_previous %}<a href="{{ keep }}&page={{ page.previous_page_number }}" aria-label="Previous page">‹</a>{% else %}<span class="off">‹</span>{% endif %}
+        {% for n in page.paginator.page_range %}
+          {% if n == page.number %}<span class="on">{{ n }}</span>
+          {% elif n == 1 or n == page.paginator.num_pages or n|add:"-2" <= page.number and n|add:"2" >= page.number %}<a href="{{ keep }}&page={{ n }}">{{ n }}</a>
+          {% elif n == 2 or n == page.paginator.num_pages|add:"-1" %}<span class="gap">…</span>{% endif %}
+        {% endfor %}
+        {% if page.has_next %}<a href="{{ keep }}&page={{ page.next_page_number }}" aria-label="Next page">›</a>{% else %}<span class="off">›</span>{% endif %}
+      </nav>
+    {% endif %}
+  </footer>
+</section>
+<script>
+document.addEventListener("click", function (e) {
+  document.querySelectorAll(".ts-kebab[open]").forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute("open"); });
+});
+</script>
+{% endblock %}

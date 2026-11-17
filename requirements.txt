@@ -1,0 +1,22 @@
+Django==5.1.4
+gunicorn==23.0.0
+psycopg[binary]==3.2.3
+whitenoise==6.8.2
+python-dotenv==1.0.1
+httpx==0.28.1
+Markdown==3.7
+pywebpush==2.0.3
+py-vapid==1.9.1
+cryptography==44.0.0
+openpyxl==3.1.5
+pypdf==5.1.0
+python-docx==1.1.2
+python-pptx==1.0.2
+pgvector==0.5.0
+pydantic-ai-slim[openai]==2.32.1
+httpx2==2.12.0  # pydantic's httpx fork; imported directly in apps/rag/services/agent.py (also a transitive dep of pydantic-ai-slim/openai)
+sqlparse==0.6.0
+channels==4.3.2
+uvicorn[standard]==0.52.4
+uvicorn-worker==0.4.0
+paramiko==3.5.0

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}VMs · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / VMs</p>
+    <h1>{{ project.key }} · VMs</h1>
+  </div>
+</div>
+{% include "_project_tabs.html" %}
+{% include "vms/_project_vms.html" %}
+{% endblock %}

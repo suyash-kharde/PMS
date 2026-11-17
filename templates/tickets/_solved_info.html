@@ -1,0 +1,3 @@
+{% comment %}The (i) icon beside a Solved ticket's status: hover for who assigned it and its final handoff status; click for a popup.{% endcomment %}
+{% if t.status == "solved" %}<button type="button" class="info-btn" data-info="{{ t.solved_tooltip }}" data-info-label="Solved"
+        title="{{ t.solved_tooltip }}" aria-label="Solved: {{ t.solved_tooltip }}" aria-expanded="false">i</button>{% endif %}

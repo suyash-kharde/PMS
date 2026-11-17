@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}AI models · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>AI / ML models</h1>
+    <p class="muted">Endpoints, keys and certificates for every model this system calls. Changes apply on the next call — no redeploy.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'aimodels:create' %}">+ Add endpoint</a>
+</div>
+
+{% for group in groups %}
+  <section class="card">
+    <header class="card-head">
+      <h2>{{ group.label }}</h2>
+      <span class="muted small">
+        in use: <code>{{ group.active.model|default:"—" }}</code> at <code>{{ group.active.base_url }}</code>
+        <span class="chip" style="--c:{% if group.active.source == 'database' %}#22c55e{% else %}#94a3b8{% endif %}">{{ group.active.source }}</span>
+      </span>
+    </header>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Name</th><th>Model</th><th>Endpoint</th><th>TLS</th><th>Last check</th><th>Use</th><th></th></tr></thead>
+        <tbody>
+          {% for p in group.providers %}
+            <tr class="{% if not p.is_active %}muted{% endif %}">
+              <td>
+                <a href="{{ p.get_absolute_url }}"><strong>{{ p.name }}</strong></a>
+                {% if p.is_default %}<span class="chip" style="--c:#22c55e">default</span>{% endif %}
+                {% if not p.is_active %}<span class="chip">off</span>{% endif %}
+              </td>
+              <td><code>{{ p.model_name|default:"—" }}</code></td>
+              <td><code class="small">{{ p.base_url }}</code></td>
+              <td>
+                {% if p.uses_tls %}
+                  {% if p.ca_cert %}<span class="chip" style="--c:#22c55e">CA uploaded</span>
+                  {% elif not p.verify_ssl %}<span class="chip" style="--c:#e11d48">unverified</span>
+                  {% else %}<span class="chip" style="--c:#f59e0b">system CAs</span>{% endif %}
+                {% else %}<span class="muted small">plain HTTP</span>{% endif %}
+              </td>
+              <td>
+                {% if p.last_status == 'ok' %}<span class="chip" style="--c:#22c55e">ok {{ p.last_latency_ms }}ms</span>
+                {% elif p.last_status %}<span class="chip" style="--c:#e11d48" title="{{ p.last_error }}">error</span>
+                {% else %}<span class="muted small">never</span>{% endif %}
+                {% if p.last_checked_at %}<small class="muted block">{{ p.last_checked_at|date:"d M Y, H:i" }}</small>{% endif %}
+              </td>
+              <td>
+                {% if not p.is_default %}
+                  <form method="post" action="{% url 'aimodels:make_default' p.pk %}">{% csrf_token %}
+                    <button class="btn btn-sm" type="submit">Use this</button></form>
+                {% endif %}
+              </td>
+              <td class="row-actions">
+                <button class="btn btn-sm" data-test="{% url 'aimodels:test' p.pk %}" data-row="{{ p.pk }}">Test</button>
+                <a class="btn btn-sm" href="{% url 'aimodels:edit' p.pk %}">Edit</a>
+              </td>
+            </tr>
+            <tr class="test-result" id="test-{{ p.pk }}" hidden><td colspan="7"></td></tr>
+          {% empty %}
+            <tr><td colspan="7" class="empty">
+              Nothing configured — the environment variables are used.
+              <a class="link" href="{% url 'aimodels:create' %}">Add an endpoint</a>.
+            </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endfor %}
+
+<section class="card">
+  <header class="card-head"><h2>How this is resolved</h2></header>
+  <p class="muted small">
+    For each job the system takes the <strong>default active</strong> row here; if there is none it falls back to the
+    environment variables it shipped with. Uploaded CA certificates are used as the trust store for that endpoint only.
+    API keys are write-only — once saved they are never rendered back into the page.
+  </p>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/aimodels.js' %}"></script>{% endblock %}

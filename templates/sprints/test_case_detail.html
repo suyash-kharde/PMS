@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ tc.key }} · {{ tc.title }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'sprints:test_case_list' %}">Test cases</a> /
+      {% if tc.requirement %}<a href="{{ tc.requirement.get_absolute_url }}">{{ tc.requirement.key }}</a> / {% endif %}{{ tc.key }}
+    </p>
+    <h1>{{ tc.title }}</h1>
+    <p class="muted">
+      <span class="pill tc-status-{{ tc.status }}">{{ tc.get_status_display }}</span>
+      · {{ tc.get_test_type_display }} test
+      · <a href="{{ tc.project.get_absolute_url }}">{{ tc.project.key }}</a>
+      {% if tc.executed_on %}· run {{ tc.executed_on|date:"d M Y" }} by {{ tc.developer.display_name|default:"—" }}{% endif %}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if can_test %}
+      <a class="btn btn-primary" href="{% url 'sprints:test_case_execute' tc.pk %}">Record execution</a>
+      <a class="btn" href="{% url 'sprints:test_case_edit' tc.pk %}">Edit</a>
+      <form method="post" action="{% url 'sprints:test_case_delete' tc.pk %}" data-confirm="Delete {{ tc.key }}?">{% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <dl class="kv kv-wide">
+    <dt>Test Case ID</dt><dd>{{ tc.key }}</dd>
+    <dt>Requirement ID</dt><dd>{{ tc.requirement_key }}</dd>
+    <dt>User Story ID</dt><dd>{{ tc.story_id|default:"—" }}</dd>
+    <dt>Acceptance criterion</dt><dd>{% if tc.criterion %}{{ tc.criterion.text }}{% else %}—{% endif %}</dd>
+    <dt>Type</dt><dd>{{ tc.get_test_type_display }}</dd>
+    <dt>Preconditions</dt><dd>{{ tc.preconditions|linebreaksbr|default:"—" }}</dd>
+    <dt>Input data</dt><dd>{{ tc.input_data|linebreaksbr|default:"—" }}</dd>
+    <dt>Test steps</dt><dd>{{ tc.steps|linebreaksbr|default:"—" }}</dd>
+    <dt>Expected result</dt><dd>{{ tc.expected_result|linebreaksbr|default:"—" }}</dd>
+    <dt>Actual result</dt><dd>{{ tc.actual_result|linebreaksbr|default:"—" }}</dd>
+    <dt>Status</dt><dd><span class="pill tc-status-{{ tc.status }}">{{ tc.get_status_display }}</span></dd>
+    <dt>Developer</dt><dd>{{ tc.developer.display_name|default:"—" }}</dd>
+    <dt>Execution date</dt><dd>{{ tc.executed_on|date:"d M Y"|default:"—" }}</dd>
+    <dt>Comments</dt><dd>{{ tc.comments|linebreaksbr|default:"—" }}</dd>
+  </dl>
+</div>
+{% endblock %}

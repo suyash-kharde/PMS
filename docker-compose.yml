@@ -1,0 +1,153 @@
+services:
+  db:
+    # pgvector/pgvector:pg16 == Postgres 16 + the `vector` extension the rag app's
+    # first migration enables. Plain postgres:16 (or -alpine) fails that migration.
+    image: pgvector/pgvector:pg16
+    container_name: pms_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pms}
+      POSTGRES_USER: ${POSTGRES_USER:-pms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pms_password}
+    volumes:
+      # persistent postgres data: app tables + the Django cache table `pms_cache`
+      - pgdata:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=768MB
+      -c work_mem=16MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pms} -d ${POSTGRES_DB:-pms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  web:
+    build: .
+    container_name: pms_web
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      POSTGRES_HOST: db
+    volumes:
+      # source code lives on a bind mount -> edit on host, autoreload in container
+      - ./:/app
+      - staticfiles:/app/staticfiles
+      - vapid:/app/secrets
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+
+  # background pipeline: denoise -> ASR + diarization -> BRD regeneration
+  worker:
+    build: .
+    container_name: pms_worker
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      POSTGRES_HOST: db
+      RUN_MIGRATIONS: "0"
+      SEED_DEMO: "0"
+    volumes:
+      - ./:/app
+      - vapid:/app/secrets
+    depends_on:
+      web:
+        condition: service_started
+      db:
+        condition: service_healthy
+    command: ["python", "manage.py", "process_queue", "--loop"]
+
+  # TLS terminator: self-signed cert on first boot, proxies to Django.
+  # HTTPS is what makes the service worker + Push API work off localhost.
+  proxy:
+    build: ./services/proxy
+    container_name: pms_proxy
+    restart: unless-stopped
+    environment:
+      HTTPS_PORT: ${HTTPS_PORT:-8443}
+      CERT_HOST: ${CERT_HOST:-localhost}
+    volumes:
+      - certs:/etc/nginx/certs
+      - staticfiles:/app/staticfiles:ro
+      - ./media:/app/media:ro
+    depends_on:
+      - web
+    ports:
+      - "${HTTPS_PORT:-8443}:443"
+      - "${HTTP_PORT:-8080}:80"
+
+  # OpenAI-compatible noise reduction — weya-ai/hush
+  denoise:
+    build:
+      context: ./services/denoise
+      args:
+        INSTALL_HUSH: ${INSTALL_HUSH:-0}
+    container_name: pms_denoise
+    restart: unless-stopped
+    environment:
+      ENGINE: ${DENOISE_ENGINE:-auto}
+      DENOISE_MODEL: weya-ai/hush
+      HF_HOME: /models
+    volumes:
+      - hfcache:/models
+    ports:
+      - "${DENOISE_PORT:-8100}:8100"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8100/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # OpenAI-compatible ASR + speaker diarization — nvidia parakeet multitalker + sortformer
+  asr:
+    build:
+      context: ./services/asr
+      args:
+        INSTALL_DIARIZER: ${INSTALL_DIARIZER:-1}
+    container_name: pms_asr
+    restart: unless-stopped
+    environment:
+      # ASR: remote Qwen endpoint (multi-language)
+      ASR_MODEL: ${ASR_MODEL:-Qwen/Qwen3-ASR-0.6B}
+      ASR_BASE_URL: ${ASR_BASE_URL:-http://172.16.15.111:7600/v1}
+      ASR_API_KEY: ${ASR_API_KEY:-cant-be-empty}
+      ASR_BACKEND: ${ASR_BACKEND:-auto}
+      # the only local model: speaker diarization
+      DIAR_MODEL: ${DIAR_MODEL:-pyannote/speaker-diarization-3.1}
+      DIARIZER: ${DIARIZER:-auto}
+      DIAR_DEVICE: ${DIAR_DEVICE:-auto}
+      HF_TOKEN: ${HF_TOKEN:-}
+      MAX_CHUNK_SECONDS: ${MAX_CHUNK_SECONDS:-25}
+      HF_HOME: /models
+    volumes:
+      - hfcache:/models
+      # certificates uploaded on the AI models page live here
+      - ./media:/app/media:ro
+    ports:
+      - "${ASR_PORT:-8200}:8200"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8200/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Real NeMo inference on an NVIDIA GPU host (needs INSTALL_NEMO=1):
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  pgdata:
+  staticfiles:
+  hfcache:
+  certs:
+  vapid:

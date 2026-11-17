@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% load humanize perms %}
+{% block title %}{{ requirement.key }} · {{ requirement.title }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'projects:list' %}">Projects</a> /
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      {% if sprint %}<a href="{{ sprint.get_absolute_url }}">{{ sprint.key }}</a>{% else %}<a href="{% url 'sprints:requirement_list' project.pk %}">Backlog</a>{% endif %}
+      / {{ requirement.key }}
+    </p>
+    <h1>{{ requirement.title }}</h1>
+    <p class="muted">
+      <span class="pill rq-status-{{ requirement.status }}">{{ requirement.get_status_display }}</span>
+      <span class="prio prio-{{ requirement.priority }}"></span> {{ requirement.get_priority_display }} priority
+      · {{ requirement.estimate_points }} pts
+      {% if requirement.assignee %}· {{ requirement.assignee.display_name }}{% endif %}
+      {% if requirement.user_story_id %}· story {{ requirement.user_story_id }}{% endif %}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if can_manage %}
+      <a class="btn" href="{% url 'sprints:requirement_edit' requirement.pk %}">Edit</a>
+      <form method="post" action="{% url 'sprints:requirement_delete' requirement.pk %}" data-confirm="Delete {{ requirement.key }}?">{% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-side">
+  <div class="stack">
+    <section class="card">
+      <header class="card-head"><h2>Description</h2></header>
+      <div class="prose">{{ requirement.description|linebreaksbr|default:"<em class='muted'>No description.</em>" }}</div>
+      {% if requirement.user_story %}
+        <header class="card-head"><h2>User story</h2></header>
+        <div class="prose">{{ requirement.user_story|linebreaksbr }}</div>
+      {% endif %}
+    </section>
+
+    <!-- Acceptance criteria -->
+    <section class="card">
+      <header class="card-head"><h2>Acceptance criteria · {% with m=requirement.criteria_met %}{{ m.0 }}/{{ m.1 }} met{% endwith %}</h2></header>
+      <ul class="list">
+        {% for c in criteria %}
+          <li class="list-row">
+            {% if can_manage %}
+              <form method="post" action="{% url 'sprints:criterion_toggle' c.pk %}">{% csrf_token %}
+                <button class="linkbtn" type="submit" title="Toggle met">{% if c.is_met %}☑{% else %}☐{% endif %}</button>
+              </form>
+            {% else %}<span>{% if c.is_met %}☑{% else %}☐{% endif %}</span>{% endif %}
+            <span class="grow">
+              {% if c.format == 'gwt' %}
+                <strong>Given</strong> {{ c.given_text }} <strong>When</strong> {{ c.when_text }} <strong>Then</strong> {{ c.then_text }}
+              {% else %}{{ c.statement }}{% endif %}
+              {% if c.notes %}<em class="muted small"> — {{ c.notes }}</em>{% endif %}
+            </span>
+            {% if can_manage %}
+              <a class="linkbtn" href="{% url 'sprints:child_edit' 'criteria' c.pk %}">edit</a>
+              <form method="post" action="{% url 'sprints:child_delete' 'criteria' c.pk %}" data-confirm="Delete this criterion?">{% csrf_token %}<button class="linkbtn" type="submit">×</button></form>
+            {% endif %}
+          </li>
+        {% empty %}<li class="empty">No acceptance criteria yet.</li>{% endfor %}
+      </ul>
+      {% if can_manage %}
+        <details class="span-2">
+          <summary class="btn btn-sm">+ Add criterion</summary>
+          <form method="post" action="{% url 'sprints:child_add' 'criteria' requirement.pk %}" class="form-grid">
+            {% csrf_token %}
+            {% include "sprints/_form_body.html" with form=criterion_form %}
+            <div class="form-actions span-2"><button class="btn btn-primary" type="submit">Add criterion</button></div>
+          </form>
+        </details>
+      {% endif %}
+    </section>
+
+    <!-- Field-level specification -->
+    <section class="card">
+      <header class="card-head"><h2>Field specification · {{ field_specs|length }}</h2></header>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Field</th><th>Type</th><th>Mandatory</th><th>Length</th><th>Validation</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
+          <tbody>
+            {% for f in field_specs %}
+              <tr>
+                <td><strong>{{ f.name }}</strong>{% if f.default_value %}<br><span class="muted small">default: {{ f.default_value }}</span>{% endif %}</td>
+                <td>{{ f.get_field_type_display }}</td>
+                <td>{{ f.get_mandatory_display }}{% if f.mandatory_condition %} <span class="muted small">({{ f.mandatory_condition }})</span>{% endif %}</td>
+                <td>{{ f.max_length|default:"—" }}</td>
+                <td>{{ f.validation|default:"—" }}{% if f.notes %}<br><span class="muted small">{{ f.notes }}</span>{% endif %}</td>
+                {% if can_manage %}<td class="nowrap">
+                  <a class="linkbtn" href="{% url 'sprints:child_edit' 'fields' f.pk %}">edit</a>
+                  <form method="post" action="{% url 'sprints:child_delete' 'fields' f.pk %}" data-confirm="Delete field?">{% csrf_token %}<button class="linkbtn" type="submit">×</button></form>
+                </td>{% endif %}
+              </tr>
+            {% empty %}<tr><td colspan="{% if can_manage %}6{% else %}5{% endif %}" class="empty">No field specification.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if can_manage %}
+        <details class="span-2">
+          <summary class="btn btn-sm">+ Add field</summary>
+          <form method="post" action="{% url 'sprints:child_add' 'fields' requirement.pk %}" class="form-grid">
+            {% csrf_token %}
+            {% include "sprints/_form_body.html" with form=field_form %}
+            <div class="form-actions span-2"><button class="btn btn-primary" type="submit">Add field</button></div>
+          </form>
+        </details>
+      {% endif %}
+    </section>
+
+    <!-- Unit test cases -->
+    <section class="card">
+      <header class="card-head">
+        <h2>Unit test cases · {% with t=requirement.test_summary %}{{ t.passed }}✓ {{ t.failed }}✗ / {{ t.total }}{% endwith %}</h2>
+        {% if can_test %}<a class="btn btn-sm" href="{% url 'sprints:test_case_create' requirement.pk %}">+ Test case</a>{% endif %}
+      </header>
+      <ul class="list">
+        {% for tc in test_cases %}
+          <li class="list-row">
+            <span class="pill tc-status-{{ tc.status }}">{{ tc.get_status_display }}</span>
+            <a class="grow" href="{{ tc.get_absolute_url }}">{{ tc.key }} · {{ tc.title }}</a>
+            <span class="muted small">{{ tc.get_test_type_display }}{% if tc.developer %} · {{ tc.developer.display_name }}{% endif %}</span>
+          </li>
+        {% empty %}<li class="empty">No unit test cases yet.</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+
+  <aside class="stack">
+    {% if can_manage %}
+    <section class="card">
+      <header class="card-head"><h2>Status</h2></header>
+      <form method="post" action="{% url 'sprints:requirement_transition' requirement.pk %}">{% csrf_token %}
+        <select name="status" onchange="this.form.submit()">
+          {% for value, label in status_choices %}<option value="{{ value }}" {% if value == requirement.status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </form>
+    </section>
+    {% endif %}
+
+    <!-- Risks -->
+    <section class="card">
+      <header class="card-head"><h2>Risks · {{ risks|length }}</h2></header>
+      <ul class="list">
+        {% for risk in risks %}
+          <li class="list-row-block">
+            <div><span class="pill risk-{{ risk.severity }}">{{ risk.get_likelihood_display }}×{{ risk.get_impact_display }}</span>
+              <strong>{{ risk.title }}</strong></div>
+            <div class="muted small">{{ risk.get_category_display }} · {{ risk.get_status_display }}
+              {% if risk.owner %}· {{ risk.owner.display_name }}{% elif risk.owner_note %}· {{ risk.owner_note }}{% endif %}
+              {% if risk.target_date %}· by {{ risk.target_date|date:"d M" }}{% endif %}</div>
+            {% if risk.mitigation %}<div class="muted small">Mitigation: {{ risk.mitigation }}</div>{% endif %}
+            {% if can_manage %}<div>
+              <a class="linkbtn" href="{% url 'sprints:child_edit' 'risks' risk.pk %}">edit</a>
+              <form method="post" action="{% url 'sprints:child_delete' 'risks' risk.pk %}" data-confirm="Delete risk?">{% csrf_token %}<button class="linkbtn" type="submit">delete</button></form>
+            </div>{% endif %}
+          </li>
+        {% empty %}<li class="empty">No risks.</li>{% endfor %}
+      </ul>
+      {% if can_manage %}
+        <details>
+          <summary class="btn btn-sm">+ Add risk</summary>
+          <form method="post" action="{% url 'sprints:child_add' 'risks' requirement.pk %}" class="form-grid">
+            {% csrf_token %}
+            {% include "sprints/_form_body.html" with form=risk_form %}
+            <div class="form-actions span-2"><button class="btn btn-primary" type="submit">Add risk</button></div>
+          </form>
+        </details>
+      {% endif %}
+    </section>
+
+    <!-- Dependencies -->
+    <section class="card">
+      <header class="card-head"><h2>Dependencies · {{ dependencies|length }}</h2></header>
+      <ul class="list">
+        {% for dep in dependencies %}
+          <li class="list-row-block">
+            <div><span class="pill">{{ dep.get_kind_display }}</span> <strong>{{ dep.title }}</strong></div>
+            <div class="muted small">
+              {{ dep.get_status_display }}
+              {% if dep.kind == 'internal' and dep.depends_on %}· needs <a href="{{ dep.depends_on.get_absolute_url }}">{{ dep.depends_on.key }}</a>{% endif %}
+              {% if dep.kind == 'external' and dep.external_type %}· {{ dep.external_type }}{% endif %}
+              {% if dep.owner %}· {{ dep.owner.display_name }}{% elif dep.owner_note %}· {{ dep.owner_note }}{% endif %}
+              {% if dep.due_date %}· <span class="{% if dep.is_overdue %}err{% endif %}">due {{ dep.due_date|date:"d M" }}</span>{% endif %}
+            </div>
+            {% if can_manage %}<div>
+              <a class="linkbtn" href="{% url 'sprints:child_edit' 'dependencies' dep.pk %}">edit</a>
+              <form method="post" action="{% url 'sprints:child_delete' 'dependencies' dep.pk %}" data-confirm="Delete dependency?">{% csrf_token %}<button class="linkbtn" type="submit">delete</button></form>
+            </div>{% endif %}
+          </li>
+        {% empty %}<li class="empty">No dependencies.</li>{% endfor %}
+      </ul>
+      {% if can_manage %}
+        <details>
+          <summary class="btn btn-sm">+ Add dependency</summary>
+          <form method="post" action="{% url 'sprints:child_add' 'dependencies' requirement.pk %}" class="form-grid">
+            {% csrf_token %}
+            {% include "sprints/_form_body.html" with form=dependency_form %}
+            <div class="form-actions span-2"><button class="btn btn-primary" type="submit">Add dependency</button></div>
+          </form>
+        </details>
+      {% endif %}
+    </section>
+
+    <!-- External services -->
+    <section class="card">
+      <header class="card-head"><h2>External services</h2></header>
+      <ul class="list">
+        {% for svc in services %}
+          <li class="list-row">
+            <span class="pill svc-status-{{ svc.status }}">{{ svc.get_status_display }}</span>
+            <a class="grow" href="{% url 'sprints:service_list' project.pk %}">{{ svc.name }}</a>
+          </li>
+        {% empty %}<li class="empty">None linked. <a href="{% url 'sprints:service_list' project.pk %}">Project services →</a></li>{% endfor %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

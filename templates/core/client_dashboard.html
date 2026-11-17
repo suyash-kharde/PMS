@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<style>
+  .cd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .cd-card{padding:16px;display:flex;flex-direction:column;gap:10px}
+  .cd-card h3{margin:0;font-size:16px}
+  .cd-links{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+  .cd-links li{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .cd-links a.btn{white-space:nowrap}
+</style>
+<div class="page-head">
+  <div>
+    <h1>Hello, {{ user.first_name|default:user.username }}</h1>
+    <p class="muted">{{ rows|length }} project{{ rows|length|pluralize }} assigned to you</p>
+  </div>
+</div>
+
+<div class="cd-grid">
+  {% for r in rows %}
+    <section class="card cd-card">
+      <div>
+        <h3>{{ r.project.name }}</h3>
+        <p class="muted small" style="margin:2px 0 0">{{ r.project.get_status_display }}{% if r.project.customer %} · {{ r.project.customer.name }}{% endif %}</p>
+      </div>
+      {% if r.links %}
+        <ul class="cd-links">
+          {% for link in r.links %}
+            <li><span>{{ link.title }}</span>
+              <a class="btn btn-primary btn-sm" href="{{ link.open_url }}" target="_blank" rel="noopener{% if not link.via_gateway %} noreferrer{% endif %}">Open site ↗</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted small" style="margin:0">No links have been added to this project yet.</p>
+      {% endif %}
+      <div><a class="btn btn-sm" href="{% url 'projects:project_links' r.project.pk %}">Links and sign-in details</a></div>
+    </section>
+  {% empty %}
+    <section class="card cd-card"><p class="muted" style="margin:0">No projects are assigned to you yet.</p></section>
+  {% endfor %}
+</div>
+{% endblock %}

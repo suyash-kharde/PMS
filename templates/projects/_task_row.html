@@ -1,0 +1,15 @@
+<tr>
+  <td>
+    <span class="indent" style="--d:{{ depth }}"></span>
+    <a href="{{ t.get_absolute_url }}">{{ t.title }}</a>
+    {% for l in t.labels.all %}<span class="chip" style="--c:{{ l.color }}">{{ l.name }}</span>{% endfor %}
+  </td>
+  <td><span class="chip" style="--c:{{ t.state.color }}">{{ t.state.name|default:"—" }}</span></td>
+  <td><span class="prio prio-{{ t.priority }}"></span> {{ t.get_priority_display }}</td>
+  <td>{% if t.assignee %}<span class="avatar avatar-xs" style="--c:{{ t.assignee.color }}">{{ t.assignee.initials }}</span> {{ t.assignee.display_name }}{% else %}—{% endif %}</td>
+  <td class="{% if t.is_overdue %}danger{% endif %}">{{ t.due_date|date:"d M Y"|default:"—" }}</td>
+  <td>{{ t.estimate_hours|floatformat:0 }}h / {{ t.spent_hours|floatformat:0 }}h</td>
+</tr>
+{% for child in t.children.all %}
+  {% include "projects/_task_row.html" with t=child depth=depth|add:1 %}
+{% endfor %}

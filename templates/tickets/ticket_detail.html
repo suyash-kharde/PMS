@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load perms static %}
+{% block title %}{{ ticket.key }} · {{ ticket.title }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'projects:list' %}">Projects</a> /
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'tickets:list' %}?project={{ project.pk }}">Tickets</a> / {{ ticket.key }}
+    </p>
+    <h1>{{ ticket.title }}</h1>
+    <p class="muted">
+      <span class="tkt-type tkt-type-{{ ticket.type }}">{{ ticket.get_type_display }}</span>
+      <span class="tkt-status tkt-status-{{ ticket.status }}">{{ ticket.get_status_display }}</span>{% include "tickets/_solved_info.html" with t=ticket %}
+      · Raised by {{ ticket.reporter.display_name|default:"—" }} {{ ticket.created_at|date:"d M Y, H:i" }}
+      {% if ticket.linked_task %}· <a href="{{ ticket.linked_task.get_absolute_url }}">linked task</a>{% endif %}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if is_admin %}<a class="btn btn-ghost" href="{% url 'tickets:log' ticket.pk %}">Log</a>{% endif %}
+    {% if can_edit %}<a class="btn" href="{% url 'tickets:edit' ticket.pk %}">Edit</a>{% endif %}
+    <form method="post" action="{% url 'tickets:watch' ticket.pk %}">{% csrf_token %}
+      <button class="btn btn-ghost" type="submit">{% if is_watching %}★ Watching{% else %}☆ Watch{% endif %}</button>
+    </form>
+    {% if can_delete %}
+      <form method="post" action="{% url 'tickets:delete' ticket.pk %}" data-confirm="Delete {{ ticket.key }}?">{% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-side">
+  <div class="stack">
+    <section class="card">
+      <header class="card-head"><h2>Description</h2></header>
+      <div class="prose">{{ ticket.description|linebreaksbr|default:"<em class='muted'>No description.</em>" }}</div>
+      {% if ticket.component %}<p class="muted small">Component: {{ ticket.component }}</p>{% endif %}
+    </section>
+
+    {% if ticket.steps_to_reproduce or ticket.expected_result or ticket.actual_result or ticket.environment %}
+      <section class="card">
+        <header class="card-head"><h2>Bug details</h2></header>
+        <dl class="kv kv-wide">
+          {% if ticket.steps_to_reproduce %}<dt>Steps</dt><dd>{{ ticket.steps_to_reproduce|linebreaksbr }}</dd>{% endif %}
+          {% if ticket.expected_result %}<dt>Expected</dt><dd>{{ ticket.expected_result|linebreaksbr }}</dd>{% endif %}
+          {% if ticket.actual_result %}<dt>Actual</dt><dd>{{ ticket.actual_result|linebreaksbr }}</dd>{% endif %}
+          {% if ticket.environment %}<dt>Environment</dt><dd>{{ ticket.environment }}</dd>{% endif %}
+        </dl>
+      </section>
+    {% endif %}
+
+    <section class="card">
+      <header class="card-head"><h2>Attachments</h2></header>
+      {% if attachments %}
+        <div class="tkt-attachments">
+          {% for a in attachments %}
+            <div class="tkt-att">
+              {% if a.is_image %}<a href="{{ a.file.url }}" target="_blank"><img src="{{ a.file.url }}" alt="{{ a.original_name }}"></a>
+              {% else %}<a class="btn btn-sm" href="{{ a.file.url }}" target="_blank">⬇ {{ a.original_name }}</a>{% endif %}
+              <div class="muted small">{{ a.uploaded_by.display_name|default:"—" }} · {{ a.created_at|date:"d M Y, H:i" }}
+                {% if a.uploaded_by_id == user.pk or can_edit %}
+                  <form method="post" action="{% url 'tickets:attach_delete' a.pk %}" style="display:inline">{% csrf_token %}
+                    <button class="linkbtn" type="submit">remove</button></form>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}<p class="empty">No attachments.</p>{% endif %}
+      {% if user|can:"ticket.comment" %}
+        <form method="post" action="{% url 'tickets:attach' ticket.pk %}" enctype="multipart/form-data" class="inline-form">
+          {% csrf_token %}
+          <input type="file" name="files" multiple>
+          <button class="btn" type="submit">Upload</button>
+        </form>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <header class="card-head"><h2>Comments</h2></header>
+      <ul class="feed">
+        {% for c in comments %}
+          <li><span class="avatar avatar-sm" style="--c:{{ c.author.color }}">{{ c.author.initials }}</span>
+            <div><strong>{{ c.author.display_name }}</strong> <small class="muted">{{ c.created_at|date:"d M Y, H:i" }}</small>
+              <p>{{ c.body|linebreaksbr }}</p></div></li>
+        {% empty %}<li class="empty">No comments yet.</li>{% endfor %}
+      </ul>
+      {% if user|can:"ticket.comment" %}
+        <form method="post" class="stack-sm">{% csrf_token %}{{ comment_form.body }}
+          <button class="btn btn-primary" type="submit">Comment</button></form>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card" data-ticket-patch="{{ patch_url }}">
+      <header class="card-head"><h2>Details</h2></header>
+      <dl class="kv">
+        <dt>Status</dt><dd>
+          {% if can_triage %}
+            <select data-patch="status">
+              {% for value, label in status_choices %}<option value="{{ value }}" {% if value == ticket.status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          {% else %}<span class="tkt-status tkt-status-{{ ticket.status }}">{{ ticket.get_status_display }}</span>{% endif %}
+          {% include "tickets/_solved_info.html" with t=ticket %}
+        </dd>
+        <dt>Type</dt><dd>
+          {% if can_edit %}
+            <select data-patch="type">
+              {% for value, label in type_choices %}<option value="{{ value }}" {% if value == ticket.type %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          {% else %}{{ ticket.get_type_display }}{% endif %}
+        </dd>
+        <dt>Priority</dt><dd>
+          {% if can_triage %}
+            <select data-patch="priority">
+              {% for value, label in priority_choices %}<option value="{{ value }}" {% if value == ticket.priority %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          {% else %}{{ ticket.get_priority_display }}{% endif %}
+        </dd>
+        <dt>Severity</dt><dd>
+          {% if can_edit %}
+            <select data-patch="severity">
+              <option value="">—</option>
+              {% for value, label in severity_choices %}<option value="{{ value }}" {% if value == ticket.severity %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          {% else %}{{ ticket.get_severity_display|default:"—" }}{% endif %}
+        </dd>
+        <dt>Assignee</dt><dd>
+          {% if can_triage %}
+            <select data-patch="assignee">
+              <option value="">Unassigned</option>
+              {% for m in members %}<option value="{{ m.pk }}" {% if m.pk == ticket.assignee_id %}selected{% endif %}>{{ m.display_name }}</option>{% endfor %}
+            </select>
+          {% else %}{{ ticket.assignee.display_name|default:"Unassigned" }}{% endif %}
+        </dd>
+        <dt>Component</dt><dd>
+          {% if can_edit %}<input type="text" value="{{ ticket.component }}" data-patch="component" placeholder="—">
+          {% else %}{{ ticket.component|default:"—" }}{% endif %}
+        </dd>
+        <dt>Due</dt><dd>
+          {% if can_triage %}<input type="date" value="{{ ticket.due_date|date:'Y-m-d' }}" data-patch="due_date">
+          {% else %}{{ ticket.due_date|date:"d M Y"|default:"—" }}{% endif %}
+        </dd>
+        <dt>Project</dt><dd><a href="{{ project.get_absolute_url }}">{{ project.key }}</a></dd>
+        <dt>Reporter</dt><dd>{{ ticket.reporter.display_name|default:"—" }}</dd>
+      </dl>
+      <p class="muted small" data-patch-status></p>
+    </section>
+
+    {% if can_triage %}
+      <section class="card">
+        <header class="card-head"><h2>Resolve / reject</h2></header>
+        <p class="muted small">The Status above saves as soon as you pick it. Use this box only to resolve, solve or reject. Solved hands the ticket back to whoever raised it, to test.</p>
+        <form method="post" action="{% url 'tickets:transition' ticket.pk %}" class="stack-sm" autocomplete="off">{% csrf_token %}
+          <select name="status" required autocomplete="off">
+            <option value="" selected disabled>Choose an action…</option>
+            <option value="resolved">Resolved</option>
+            <option value="solved">Solved (handed on)</option>
+            <option value="rejected">Rejected</option>
+            <option value="closed">Closed</option>
+            <option value="in_progress">Back to in progress</option>
+          </select>
+          <textarea name="resolution" rows="3" placeholder="Resolution / reason (optional)">{{ ticket.resolution }}</textarea>
+          <button class="btn btn-primary" type="submit">Apply</button>
+        </form>
+      </section>
+    {% endif %}
+
+    {% if ticket.resolution %}
+      <section class="card">
+        <header class="card-head"><h2>Resolution</h2></header>
+        <p class="prose">{{ ticket.resolution|linebreaksbr }}</p>
+        <p class="muted small">
+          {% if ticket.resolved_at %}Resolved {{ ticket.resolved_at|date:"d M Y, H:i" }}{% endif %}
+          {% if ticket.closed_at %}· Closed {{ ticket.closed_at|date:"d M Y, H:i" }}{% endif %}
+        </p>
+      </section>
+    {% endif %}
+
+    {% if can_convert %}
+      <section class="card">
+        <header class="card-head"><h2>Convert</h2></header>
+        <p class="muted small">Turn this ticket into a delivery task on the {{ project.key }} board.</p>
+        <form method="post" action="{% url 'tickets:convert' ticket.pk %}">{% csrf_token %}
+          <button class="btn" type="submit">Convert to task</button>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="card">
+      <header class="card-head"><h2>Watchers · {{ watchers|length }}</h2></header>
+      <ul class="list">
+        {% for w in watchers %}<li class="list-row"><span class="avatar avatar-xs" style="--c:{{ w.color }}">{{ w.initials }}</span> <span class="grow">{{ w.display_name }}</span></li>
+        {% empty %}<li class="empty">No watchers.</li>{% endfor %}
+      </ul>
+    </section>
+
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/tickets.js' %}"></script><script src="{% static 'js/info-pop.js' %}"></script>{% endblock %}

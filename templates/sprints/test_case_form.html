@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{% if tc %}Edit {{ tc.key }}{% else %}New test case{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'sprints:test_case_list' %}">Test cases</a>
+      {% if requirement %} / <a href="{{ requirement.get_absolute_url }}">{{ requirement.key }}</a>{% endif %}
+      {% if tc %} / <a href="{{ tc.get_absolute_url }}">{{ tc.key }}</a>{% endif %}
+    </p>
+    <h1>{% if tc %}Edit {{ tc.key }}{% else %}New unit test case{% endif %}</h1>
+    <p class="muted">Derived from a requirement / acceptance criterion so developers can verify before QA.</p>
+  </div>
+</div>
+
+<form class="card form-grid" method="post">
+  {% csrf_token %}
+  {% include "sprints/_form_body.html" %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">{% if tc %}Save{% else %}Create test case{% endif %}</button>
+    <a class="btn btn-ghost" href="{% if tc %}{{ tc.get_absolute_url }}{% elif requirement %}{{ requirement.get_absolute_url }}{% else %}{% url 'sprints:test_case_list' %}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

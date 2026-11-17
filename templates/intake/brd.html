@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load jobs %}
+{% load perms %}
+{% block title %}BRD · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Business Requirement Document</p>
+    <h1>Business Requirement Document{% if brd.is_frozen %} <span class="badge badge-completed">Frozen</span>{% endif %}</h1>
+    <p class="muted">
+      {% if brd.is_frozen %}Frozen {{ brd.frozen_at|date:"d M Y, H:i" }}{% if brd.frozen_by %} by {{ brd.frozen_by.display_name }}{% endif %}
+      {% elif version %}Version <strong>v{{ version.number }}</strong> · {{ version.created_at|date:"d M Y H:i" }}
+        · {{ version.created_by.display_name|default:"system" }}
+        {% if version.model_name %}· <code>{{ version.model_name }}</code>{% endif %}
+      {% else %}No version yet — regenerate to create the first revision.{% endif %}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if can_generate and not brd.is_frozen %}
+      <form method="post" action="{% url 'intake:brd_regenerate' project.pk %}">{% csrf_token %}
+        <input type="hidden" name="note" value="">
+        <button class="btn btn-primary" type="submit">
+          Regenerate{% if pending %} ({{ pending|length }} new){% endif %}</button>
+      </form>
+    {% endif %}
+    {% if can_edit and not brd.is_frozen %}<a class="btn" href="{% url 'intake:brd_edit' project.pk %}">Edit</a>{% endif %}
+    {% if can_edit and brd %}
+      <form method="post" action="{% url 'intake:brd_freeze' project.pk %}"
+            {% if not brd.is_frozen %}data-confirm="Freeze the BRD as final? It won't be editable or regenerable until unfrozen."{% endif %}>
+        {% csrf_token %}
+        <button class="btn {% if brd.is_frozen %}btn-primary{% else %}btn-ghost{% endif %}" type="submit">
+          {% if brd.is_frozen %}Unfreeze{% else %}Freeze as final{% endif %}
+        </button>
+      </form>
+    {% endif %}
+    {% if can_delete and brd %}
+      <form method="post" action="{% url 'intake:brd_delete' project.pk %}"
+            data-confirm="Delete this BRD with all its {{ versions|length }} version(s)? This cannot be undone. The timeline entries stay, and you can regenerate a new BRD from them.">
+        {% csrf_token %}
+        <button class="btn btn-ghost" type="submit">Delete BRD</button>
+      </form>
+    {% endif %}
+    {% if version %}
+      <a class="btn" href="{% url 'intake:brd_history' project.pk %}">History</a>
+      <a class="btn btn-ghost" href="{% url 'intake:brd_download_version' project.pk version.number %}">Download .md</a>
+    {% endif %}
+  </div>
+</div>
+{% job_banners project=project kinds="brd_update,brd_regenerate,brd_sync" %}
+
+{% include "intake/_project_tabs.html" %}
+
+{% if pending %}
+  <div class="alert">
+    {{ pending|length }} timeline entr{{ pending|length|pluralize:"y,ies" }} not folded in yet:
+    {% for e in pending %}<a class="link" href="{{ e.get_absolute_url }}">{{ e.title }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
+  </div>
+{% endif %}
+
+<div class="grid-side">
+  <section class="card">
+    {% if version %}
+      {% if version.summary %}<div class="version-note"><strong>What changed in v{{ version.number }}:</strong> {{ version.summary }}</div>{% endif %}
+      <article class="prose markdown">{{ html|safe }}</article>
+    {% else %}
+      <p class="empty">
+        This project has no BRD yet. Add timeline entries, then press <em>Regenerate</em> — the
+        model at <code>{{ llm.endpoint }}</code> writes the first revision from the project brief,
+        the participants and the timeline.
+      </p>
+    {% endif %}
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <header class="card-head"><h2>Versions</h2><a class="link" href="{% url 'intake:brd_history' project.pk %}">Compare</a></header>
+      <ul class="list">
+        {% for v in versions %}
+          <li class="list-row {% if version and v.number == version.number %}on{% endif %}">
+            <a class="grow" href="?v={{ v.number }}"><strong>v{{ v.number }}</strong>
+              <small class="muted">{{ v.created_at|date:"d M H:i" }}</small></a>
+            <span class="muted small">+{{ v.stats.added }}/-{{ v.stats.removed }}</span>
+          </li>
+        {% empty %}<li class="empty">No versions.</li>{% endfor %}
+      </ul>
+    </section>
+
+    {% if version %}
+      <section class="card">
+        <header class="card-head"><h2>This revision</h2></header>
+        <dl class="kv">
+          <dt>Summary</dt><dd>{{ version.summary|default:"—" }}</dd>
+          <dt>Source</dt><dd>{% if version.source_entry %}<a href="{{ version.source_entry.get_absolute_url }}">{{ version.source_entry.title }}</a>{% else %}—{% endif %}</dd>
+          <dt>Author</dt><dd>{{ version.created_by.display_name|default:"system" }}</dd>
+          <dt>Model</dt><dd><code>{{ version.model_name|default:"—" }}</code></dd>
+          <dt>Words</dt><dd>{{ version.stats.words }}</dd>
+        </dl>
+        {% if version.meta.speakers %}
+          <p class="muted small">Speakers credited: {% for s in version.meta.speakers %}<span class="chip" style="--c:#22c55e">{{ s }}</span>{% endfor %}</p>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    <section class="card">
+      <header class="card-head"><h2>Participants</h2><a class="link" href="{% url 'intake:participants' project.pk %}">Manage</a></header>
+      <ul class="list">
+        {% for m in project.memberships.all %}
+          <li class="list-row">
+            <span class="avatar avatar-xs" style="--c:{{ m.user.color }}">{{ m.user.initials }}</span>
+            <span class="grow">{{ m.user.display_name }}<small class="muted"> · {{ m.position|default:"—" }}</small></span>
+            <span class="chip" style="--c:{% if m.side == 'client' %}#f59e0b{% else %}#0ea5e9{% endif %}">{{ m.get_side_display }}</span>
+          </li>
+        {% empty %}<li class="empty">None yet.</li>{% endfor %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

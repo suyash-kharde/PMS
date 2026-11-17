@@ -1,0 +1,127 @@
+{% load static perms %}<!doctype html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📐</text></svg>">
+</head>
+<body class="{% if sidebar_collapsed %}sidebar-collapsed{% endif %}">
+{% if user.is_authenticated and not auth_page %}
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <a class="brand" href="{% url 'core:dashboard' %}">
+        <span class="brand-mark">P</span>
+        <span class="brand-text">{{ APP_NAME }}<small>{{ APP_TAGLINE }}</small></span>
+      </a>
+      <button class="icon-btn sidebar-close" data-toggle-sidebar aria-label="Close menu">✕</button>
+    </div>
+    <nav class="nav">
+      {% if user.is_client_login %}
+        <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}"><span class="ico">▤</span> Dashboard</a>
+        <a class="nav-item {% if request.resolver_match.namespace == 'projects' %}active{% endif %}" href="{% url 'projects:list' %}"><span class="ico">◈</span> Projects</a>
+      {% else %}
+      <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}"><span class="ico">▤</span> Dashboard</a>
+      {% if user|can:"customer.view" %}
+        <a class="nav-item {% if 'customer' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'projects:customer_list' %}"><span class="ico">⌂</span> Customers</a>
+      {% endif %}
+      <a class="nav-item {% if request.resolver_match.namespace == 'projects' and 'task' not in request.resolver_match.url_name and 'customer' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'projects:list' %}"><span class="ico">◈</span> Projects</a>
+      {% if user|can:"mytasks.view" %}<a class="nav-item {% if request.resolver_match.url_name == 'my_tasks' %}active{% endif %}" href="{% url 'projects:my_tasks' %}"><span class="ico">✓</span> My tasks</a>{% endif %}
+      {% if user|can_any:"timesheet.tab.week,timesheet.tab.people,timesheet.tab.calendar,timesheet.tab.holidays,timesheet.tab.attendance,timesheet.tab.reports" %}<a class="nav-item {% if request.resolver_match.namespace == 'timesheet' %}active{% endif %}" href="{% url 'timesheet:week' %}"><span class="ico">◷</span> Timesheet</a>{% endif %}
+      {% if user|can:"ticket.view" %}
+        <a class="nav-item {% if request.resolver_match.namespace == 'tickets' %}active{% endif %}" href="{% url 'tickets:list' %}"><span class="ico">⚑</span> Tickets</a>
+      {% endif %}
+      {% if user|can:"sprint.view" %}
+        <a class="nav-item {% if request.resolver_match.namespace == 'sprints' %}active{% endif %}" href="{% url 'sprints:sprint_list' %}"><span class="ico">◱</span> Sprints</a>
+      {% endif %}
+      {% if user|can:"aiqueue.view" %}<a class="nav-item {% if request.resolver_match.namespace == 'jobs' %}active{% endif %}" href="{% url 'jobs:queue' %}"><span class="ico">⧗</span> AI queue</a>{% endif %}
+      {% if user|can:"docs.view" %}<a class="nav-item {% if request.resolver_match.url_name == 'docs' %}active{% endif %}" href="{% url 'core:docs' %}"><span class="ico">ⓘ</span> Documentation</a>{% endif %}
+      {% if user|can:"user.view" %}
+        <div class="nav-label">Organisation</div>
+        <a class="nav-item {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}" href="{% url 'accounts:user_list' %}"><span class="ico">☺</span> People</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'org_chart' %}active{% endif %}" href="{% url 'accounts:org_chart' %}"><span class="ico">⑃</span> Hierarchy</a>
+      {% endif %}
+      {% if user|can:"customer.manage" or user|can:"project.create" or user|can:"user.create" %}
+        <a class="nav-item {% if request.resolver_match.namespace == 'bulk' %}active{% endif %}" href="{% url 'bulk:home' %}"><span class="ico">⇅</span> Bulk import</a>
+      {% endif %}
+      {% if user|can:"role.manage" or user|can:"team.manage" or user|can:"vm.manage" or user|can:"model.manage" or user|can:"security.manage" %}
+        <div class="nav-label">Administration</div>
+        {% if user|can:"model.manage" %}
+          <a class="nav-item {% if request.resolver_match.namespace == 'aimodels' %}active{% endif %}" href="{% url 'aimodels:list' %}"><span class="ico">⚛</span> AI models</a>
+        {% endif %}
+        {% if user|can:"role.manage" %}
+          <a class="nav-item {% if request.resolver_match.url_name == 'service_status' %}active{% endif %}" href="{% url 'intake:service_status' %}"><span class="ico">◍</span> Model services</a>
+        {% endif %}
+        {% if user|can:"role.manage" %}
+          <a class="nav-item {% if request.resolver_match.url_name == 'role_list' or request.resolver_match.url_name == 'role_detail' %}active{% endif %}" href="{% url 'accounts:role_list' %}"><span class="ico">◧</span> Roles</a>
+          <a class="nav-item {% if request.resolver_match.url_name == 'capability_list' %}active{% endif %}" href="{% url 'accounts:capability_list' %}"><span class="ico">⚿</span> Capabilities</a>
+        {% endif %}
+        {% if user|can:"team.manage" %}
+          <a class="nav-item {% if request.resolver_match.url_name == 'team_list' %}active{% endif %}" href="{% url 'accounts:team_list' %}"><span class="ico">⛬</span> Teams</a>
+        {% endif %}
+        {% if user|can:"security.manage" %}
+          <a class="nav-item {% if request.resolver_match.url_name == 'security_settings' %}active{% endif %}" href="{% url 'accounts:security_settings' %}"><span class="ico">⚿</span> Security</a>
+        {% endif %}
+        {% if user|can:"vm.manage" %}
+          <a class="nav-item {% if request.resolver_match.namespace == 'vms' %}active{% endif %}" href="{% url 'vms:vm_list' %}"><span class="ico">▣</span> VMs</a>
+        {% endif %}
+      {% endif %}
+      {% endif %}
+    </nav>
+    <div class="sidebar-foot">
+      <a class="user-chip" href="{% url 'accounts:user_detail' user.pk %}">
+        <span class="avatar" style="--c:{{ user.color }}">{{ user.initials }}</span>
+        <span class="user-chip-text">
+          <strong>{{ user.display_name }}</strong>
+          <small>{{ user.role.name|default:"No role" }}</small>
+        </span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="sidebar-backdrop" data-toggle-sidebar></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" data-toggle-sidebar aria-label="Menu">☰</button>
+      <div class="topbar-actions">
+        {% if not user.is_client_login %}<a class="icon-btn bell" id="bell" href="{% url 'notify:inbox' %}" title="Notifications">🔔
+          <span class="bell-badge" id="bellBadge" {% if not unread_notifications %}hidden{% endif %}>{{ unread_notifications }}</span>
+        </a>{% endif %}
+        <button class="icon-btn" data-toggle-theme title="Toggle theme">◐</button>
+        {% if user_caps|length %}<span class="pill hide-sm" title="Capabilities granted">{{ user_caps|length }} caps</span>{% endif %}
+        <a class="btn btn-ghost btn-sm hide-sm" href="{% url 'accounts:password_change' %}">Change password</a>
+        <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+          <button class="btn btn-ghost btn-sm" type="submit">Sign out</button>
+        </form>
+      </div>
+    </header>
+
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">
+            <span class="grow">{{ message }}</span>
+            <button type="button" class="alert-close" data-alert-close aria-label="Close">&#10005;</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <main class="content">{% block content %}{% endblock %}</main>
+  </div>
+</div>
+{% else %}
+  <main class="auth-wrap">{% block auth %}{% endblock %}</main>
+{% endif %}
+
+<script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/search-select.js' %}"></script>
+<script src="{% static 'js/live-search.js' %}"></script>
+{% if user.is_authenticated and not auth_page and not user.is_client_login %}<script src="{% static 'js/jobs.js' %}"></script>{% endif %}
+{% if user.is_authenticated and not auth_page and not user.is_client_login %}<script src="{% static 'js/push.js' %}"></script>{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load jobs %}
+{% load perms static %}
+{% block title %}Timeline · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Timeline</p>
+    <h1>Project timeline</h1>
+    <p class="muted">Notes, documents and recordings. Every processed entry feeds the Business Requirement Document.</p>
+  </div>
+  <div class="row-actions">
+    {% if pending %}<span class="pill">{{ pending }} entr{{ pending|pluralize:"y,ies" }} not yet in the BRD</span>{% endif %}
+    {% if user|can:"brd.view" %}<a class="btn" href="{% url 'intake:brd' project.pk %}">Open BRD</a>{% endif %}
+  </div>
+</div>
+{% job_banners project=project kinds="timeline_audio,timeline_doc,brd_update,brd_regenerate,brd_sync" %}
+
+{% include "intake/_project_tabs.html" %}
+
+{% if can_add %}
+<section class="card">
+  <header class="card-head"><h2>Add to the timeline</h2>
+    <span class="muted small">Text and audio uploads are denoised, transcribed and diarized automatically</span></header>
+  <form class="form-grid" method="post" action="{% url 'intake:entry_create' project.pk %}" enctype="multipart/form-data" id="entryForm">
+    {% csrf_token %}
+    {% for field in form %}
+      <label class="field {% if field.name == 'body' %}span-2{% endif %}">
+        <span>{{ field.label }}</span>{{ field }}
+        {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+      </label>
+    {% endfor %}
+    <div class="span-2" id="dropZone">
+      <p class="muted small">Drop an audio file (wav, mp3, m4a, ogg, webm), a document (pdf, docx, pptx), or a text file (txt, md, csv, json, srt) here — or use the field above.</p>
+      <div class="drop-preview" hidden></div>
+    </div>
+    <div class="form-actions span-2">
+      <button class="btn btn-primary" type="submit">Queue entry</button>
+      </div>
+  </form>
+</section>
+{% endif %}
+
+<form class="filters card" method="get">
+  <select name="kind"><option value="">All kinds</option>
+    {% for value, label in kind_choices %}<option value="{{ value }}" {% if kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+  <a class="btn btn-ghost" href="{% url 'intake:timeline' project.pk %}">Reset</a>
+</form>
+
+<ol class="timeline" id="timeline" data-status-url="/api/entries/0/status/">
+  {% for entry in entries %}
+    <li class="tl-item" data-entry="{{ entry.pk }}">
+      <span class="tl-dot kind-{{ entry.kind }}"></span>
+      <article class="card tl-card">
+        <header class="card-head">
+          <div>
+            <h2><a href="{{ entry.get_absolute_url }}">{{ entry.title }}</a></h2>
+            <p class="muted small">
+              {{ entry.get_kind_display }} · {{ entry.occurred_at|date:"d M Y H:i" }} ·
+              {{ entry.author.display_name|default:"system" }} · {{ entry.created_at|date:"d M Y, H:i" }}
+            </p>
+          </div>
+          <span class="badge status-{{ entry.status }}" data-status>{{ entry.get_status_display }}</span>
+        </header>
+
+        {% if entry.body %}<p class="clamp-3">{{ entry.body }}</p>{% endif %}
+
+        {% if entry.speakers.all %}
+          <div class="tag-row">
+            {% for s in entry.speakers.all %}
+              <span class="chip" style="--c:{% if s.is_named %}#22c55e{% else %}#f59e0b{% endif %}">
+                {{ s.resolved_name }}{% if not s.is_named %} · unnamed{% endif %}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <footer class="tl-foot">
+          {% if entry.media_set.exists %}<span class="muted small">🎙 {{ entry.media_set.first.duration_seconds|floatformat:0 }}s · {{ entry.segments.count }} segments</span>{% endif %}
+          {% if entry.brd_applied %}<span class="chip" style="--c:#6366f1">in BRD</span>{% else %}<span class="chip" style="--c:#94a3b8">not in BRD yet</span>{% endif %}
+          <a class="link" href="{{ entry.get_absolute_url }}">Open</a>
+        </footer>
+      </article>
+    </li>
+  {% empty %}
+    <p class="empty">Nothing on the timeline yet.</p>
+  {% endfor %}
+</ol>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/timeline.js' %}"></script>{% endblock %}

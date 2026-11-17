@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ ticket.key }} · Log · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'projects:list' %}">Projects</a> /
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'tickets:list' %}?project={{ project.pk }}">Tickets</a> /
+      <a href="{{ ticket.get_absolute_url }}">{{ ticket.key }}</a> / Log
+    </p>
+    <h1>{{ ticket.key }} · Log</h1>
+  </div>
+  <div class="row-actions">
+    <a class="btn btn-ghost" href="{{ ticket.get_absolute_url }}">Back to ticket</a>
+  </div>
+</div>
+
+<section class="card">
+  <header class="card-head">
+    <h2>History</h2>
+    <div class="row-actions">
+      <a class="btn btn-sm {% if range_key == 'all' %}btn-primary{% endif %}" href="{% querystring range='all' %}">All time</a>
+      <a class="btn btn-sm {% if range_key == 'week' %}btn-primary{% endif %}" href="{% querystring range='week' %}">This week</a>
+      <a class="btn btn-sm {% if range_key == 'today' %}btn-primary{% endif %}" href="{% querystring range='today' %}">Today</a>
+    </div>
+  </header>
+  <ul class="feed compact">
+    {% for e in events %}
+      <li>
+        <div>
+          <strong>{{ e.actor.display_name|default:"System" }}</strong> {{ e.verb }}
+          <small class="muted">{{ e.created_at|date:"d M Y, H:i" }}</small>
+        </div>
+      </li>
+    {% empty %}<li class="empty">No log entries for this range.</li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}

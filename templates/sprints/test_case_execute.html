@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Run {{ tc.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'sprints:test_case_list' %}">Test cases</a> /
+      <a href="{{ tc.get_absolute_url }}">{{ tc.key }}</a> / Record execution
+    </p>
+    <h1>Record execution · {{ tc.key }}</h1>
+    <p class="muted">{{ tc.title }}</p>
+  </div>
+</div>
+
+<div class="grid-side">
+  <form class="card form-grid" method="post">
+    {% csrf_token %}
+    {% include "sprints/_form_body.html" %}
+    <div class="form-actions span-2">
+      <button class="btn btn-primary" type="submit">Save result</button>
+      <a class="btn btn-ghost" href="{{ tc.get_absolute_url }}">Cancel</a>
+    </div>
+  </form>
+  <aside class="card">
+    <header class="card-head"><h2>Expected result</h2></header>
+    <div class="prose">{{ tc.expected_result|linebreaksbr|default:"<em class='muted'>—</em>" }}</div>
+    <header class="card-head"><h2>Steps</h2></header>
+    <div class="prose">{{ tc.steps|linebreaksbr|default:"<em class='muted'>—</em>" }}</div>
+  </aside>
+</div>
+{% endblock %}

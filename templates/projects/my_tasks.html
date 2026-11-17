@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}My tasks · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>My tasks</h1><p class="muted">{{ tasks|length }} open</p></div></div>
+<div class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Task</th><th>Project</th><th>State</th><th>Priority</th><th>Due</th></tr></thead>
+    <tbody>
+      {% for t in tasks %}
+        <tr>
+          <td><a href="{{ t.get_absolute_url }}">{{ t.title }}</a></td>
+          <td><a href="{{ t.project.get_absolute_url }}">{{ t.project.key }}</a></td>
+          <td><span class="chip" style="--c:{{ t.state.color }}">{{ t.state.name|default:"—" }}</span></td>
+          <td><span class="prio prio-{{ t.priority }}"></span> {{ t.get_priority_display }}</td>
+          <td class="{% if t.is_overdue %}danger{% endif %}">{{ t.due_date|date:"d M Y"|default:"—" }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="empty">Nothing open.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if done %}
+<div class="card table-wrap">
+  <header class="card-head"><h2>Recently completed</h2></header>
+  <table class="table">
+    <tbody>{% for t in done %}<tr><td class="done"><a href="{{ t.get_absolute_url }}">{{ t.title }}</a></td><td>{{ t.project.key }}</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

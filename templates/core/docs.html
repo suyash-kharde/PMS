@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Documentation · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Documentation</h1>
+    <p class="muted">A practical guide to the day-to-day: people, customers, timelines, and the two built-in AI agents.</p>
+  </div>
+</div>
+
+<div class="docs-jump">
+  <a href="#users">01 Creating a user</a>
+  <a href="#passwords">02 Managing passwords</a>
+  <a href="#customers">03 Creating a customer</a>
+  <a href="#assign">04 People on a project</a>
+  <a href="#timeline">05 The timeline</a>
+  <a href="#brd">06 The BRD agent</a>
+  <a href="#askai">07 Ask AI</a>
+  <a href="#tickets">08 Raising a good ticket</a>
+</div>
+
+<div class="docs-lightbox" id="docsLightbox"><img id="docsLightboxImg" alt="Enlarged screenshot"></div>
+
+<!-- ===================================================== 01 USERS -->
+<section class="card docs-section" id="users">
+  <p class="docs-kicker">People &amp; access · 01</p>
+  <h2>Creating a user</h2>
+  <p class="docs-dek">Every person who needs to log in — internal staff or a client contact — starts here.</p>
+
+  <p class="docs-path">Sidebar<span class="sep">→</span>People<span class="sep">→</span><strong>+ New user</strong></p>
+  <p>Requires the <span class="docs-cap">user.create</span> capability. If People isn't in your sidebar at all, ask
+    an administrator to grant it.</p>
+
+  <ol class="docs-steps">
+    <li>Fill in <strong>Username</strong>, name and email. Username is the only strictly required field.</li>
+    <li>Set <strong>Role</strong> — this is what actually grants capabilities (see the note below). <strong>Team</strong>
+      and <strong>Manager</strong> shape the org chart and reporting-line permission scopes.</li>
+    <li>Set <strong>Customer</strong> if this person is a client-side contact rather than internal staff — it links
+      them to that customer record, and both the bulk-import People sheet and the project participants picker use it.</li>
+    <li><strong>Description</strong>, <strong>Responsibility</strong> and <strong>Remark</strong> are free text for
+      anyone looking the person up later — not shown to the person themselves.</li>
+    <li>Save.</li>
+  </ol>
+
+  <figure class="docs-shot">
+    <div class="docs-shot-bar"><i></i><i></i><i></i><span>/users/new/</span></div>
+    <img src="{% static 'img/docs/02_new_user_form.png' %}" alt="The New user form, showing username, name, role, team, manager, customer and free-text fields">
+    <figcaption>The full new-user form — role and team drive permissions; customer links a client contact to their organisation.</figcaption>
+  </figure>
+
+  <div class="docs-callout tip">
+    <b class="lbl">Role vs. capability</b>
+    <p>A <strong>Role</strong> is a bundle of capabilities (e.g. <span class="docs-cap">project.edit</span>,
+      <span class="docs-cap">timeline.view</span>), each granted at a scope — <em>own</em>, <em>team</em>, or <em>all</em>.
+      What a user can actually do, and on which projects, comes from their role and where they sit in the team/reporting
+      structure — not from anything set on the user form itself. See <a href="{% url 'accounts:role_list' %}">Roles</a>
+      and <a href="{% url 'accounts:capability_list' %}">Capabilities</a> to inspect or change what a role grants.</p>
+  </div>
+
+  <details class="adder">
+    <summary>Creating many people at once</summary>
+    <div>
+      <p>Sidebar → <a href="{% url 'bulk:home' %}">Bulk import</a> → People gives you a spreadsheet template with
+        every one of these fields, including Role, Team, Manager and Customer as plain-text lookups by name. Upload
+        it and you get a review screen — errors and warnings per row — before anything is actually saved. The
+        combined template on the same page creates Customers, People and Projects from one workbook in a single
+        pass, letting a new project's people reference a customer defined earlier in the same file.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ===================================================== 02 PASSWORDS -->
+<section class="card docs-section" id="passwords">
+  <p class="docs-kicker">People &amp; access · 02</p>
+  <h2>Managing passwords</h2>
+  <p class="docs-dek">There's no self-service "forgot password" flow. Every password is set by someone with edit
+    rights on that account.</p>
+
+  <h3>Setting a password when you create someone</h3>
+  <p>On the New user form, <strong>Password</strong> is optional. What happens if you leave it blank depends on
+    <em>where</em> you create the person:</p>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Where you create them</th><th>Password left blank</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Sidebar → People → <strong>New user</strong></td>
+          <td><span class="badge badge-cancelled">No password set</span> — they can't log in until someone edits them and sets one.</td>
+        </tr>
+        <tr>
+          <td>Project → People → <strong>Create a new person and add them</strong></td>
+          <td><span class="badge badge-active">Auto-generated</span> — a random password is created and shown to you once, ready to hand off.</td>
+        </tr>
+        <tr>
+          <td>Bulk import → People sheet, Password column blank</td>
+          <td><span class="badge badge-active">Auto-generated</span> — shown per-row on the results screen after import.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>If you want someone created from the plain People form to log in immediately, either type a password for them
+    directly, or use the project-level "Create a new person" flow instead.</p>
+
+  <h3>Changing an existing password</h3>
+  <ol class="docs-steps">
+    <li>Sidebar → <strong>People</strong> → open the person → <strong>Edit</strong>.</li>
+    <li>Type a new value into <strong>Password</strong>. Leaving it blank here keeps whatever they have now — this
+      is the one place the field's "leave blank" behaviour means <em>keep</em>, not <em>skip</em>.</li>
+    <li>Save, and tell them the new password over a channel you trust — Planwise doesn't email it anywhere.</li>
+  </ol>
+
+  <figure class="docs-shot">
+    <div class="docs-shot-bar"><i></i><i></i><i></i><span>/users/2/edit/</span></div>
+    <img src="{% static 'img/docs/03_edit_user_password.png' %}" alt="Editing an existing user, scrolled to the password field with its help text">
+    <figcaption>Editing an account. Requires <span class="docs-cap">user.edit</span> — scoped the same way as everything else, by role.</figcaption>
+  </figure>
+
+  <h3>Getting an account</h3>
+  <p>Accounts are created by an administrator (People, then <strong>New user</strong>). There is no self sign-up page.</p>
+  <ol class="docs-steps">
+    <li>Your administrator creates your account and gives you a first password.</li>
+    <li>Sign in with it. You are asked to choose your own password straight away: type it twice, in
+      <strong>Password</strong> and <strong>Password confirmation</strong>.</li>
+    <li>An admin can change your role, team or manager later from People.</li>
+  </ol>
+
+  <h3>Password rules</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Rule</th><th>Example that is refused</th></tr></thead>
+      <tbody>
+        <tr><td>At least <strong>6 characters</strong></td><td><code>abc12</code></td></tr>
+        <tr><td>Not a <strong>common password</strong></td><td><code>password</code>, <code>123456</code>, <code>qwerty</code></td></tr>
+        <tr><td>Both boxes must <strong>match</strong> (sign-up only)</td><td>Typing a different value in Password confirmation</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>These rules are checked on the <strong>sign-up</strong> page. A password an admin types on the
+    <strong>New user</strong> or <strong>Edit</strong> form is saved as entered and is not checked against them,
+    so follow the same rules when setting one for someone else.</p>
+
+  <h3>Changing your own password</h3>
+  <p>Click <strong>Change password</strong> in the top bar. Type your current password, then the new one twice.
+    The same rules apply (at least 6 characters, not a common password). You stay signed in afterwards.</p>
+
+  <h3>First sign-in: set your own password</h3>
+  <p>Every account is asked to change its password <strong>once</strong>: everyone who existed when this was switched
+    on, and every account created since (People → New user, Bulk import, a project's "create person", or sign-up).
+    Until you do, any page you open takes you to <strong>Change password</strong>; <strong>Sign out</strong> still
+    works. After that you're never asked again — not even when an admin later sets a new password for you.</p>
+
+  <h3>Showing the password while typing</h3>
+  <p>The password boxes on the login and sign-up pages have an <strong>eye</strong> button on the right. Click it to
+    show what you typed, and click again to hide it. Use it to check for typos, not on a shared screen.</p>
+
+  <div class="docs-callout warn">
+    <b class="lbl">No self-service reset</b>
+    <p>There's currently no "forgot my password" page. If someone is locked out, an admin (or anyone with
+      <span class="docs-cap">user.edit</span> reaching that account) has to set a new one for them via Edit.</p>
+  </div>
+</section>
+
+<!-- ===================================================== 03 CUSTOMERS -->
+<section class="card docs-section" id="customers">
+  <p class="docs-kicker">Organisation · 03</p>
+  <h2>Creating a customer</h2>
+  <p class="docs-dek">A customer is the client organisation a project is delivered for. Projects, client-side people,
+    and the BRD's stakeholder section all hang off this record.</p>
+
+  <p class="docs-path">Sidebar<span class="sep">→</span>Customers<span class="sep">→</span><strong>+ New customer</strong></p>
+  <p>Requires <span class="docs-cap">customer.manage</span>.</p>
+
+  <ol class="docs-steps">
+    <li><strong>Name</strong> is the only required field. <strong>Code</strong> is a short key (like <code>ACME</code>) —
+      leave it blank and one is generated from the name automatically.</li>
+    <li><strong>Account manager</strong> and <strong>Primary contact</strong> are picked from existing users — create
+      those people first if they don't exist yet.</li>
+    <li>Fill in industry, website, contact details and notes as you have them — all optional, all editable later.</li>
+  </ol>
+
+  <figure class="docs-shot">
+    <div class="docs-shot-bar"><i></i><i></i><i></i><span>/customers/new/</span></div>
+    <img src="{% static 'img/docs/04_new_customer_form.png' %}" alt="The New customer form">
+    <figcaption>A blank customer record — code, account manager and primary contact can all be filled in later.</figcaption>
+  </figure>
+
+  <details class="adder">
+    <summary>Creating many customers at once</summary>
+    <div>
+      <p>The same <a href="{% url 'bulk:home' %}">Bulk import</a> tool has a Customers template and a combined
+        workbook that creates customers, their projects, and their people in one upload — each sheet can reference
+        records defined earlier in the same file, even before they exist in the database.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ===================================================== 04 ASSIGN PEOPLE -->
+<section class="card docs-section" id="assign">
+  <p class="docs-kicker">Organisation · 04</p>
+  <h2>Putting people on a project</h2>
+  <p class="docs-dek">Every project keeps two rosters — client side and our side — each person carrying a role,
+    responsibility and remarks that the BRD agent reads directly.</p>
+
+  <p class="docs-path">Project<span class="sep">→</span><strong>People</strong> tab</p>
+  <p>Adding, removing or editing briefs needs <span class="docs-cap">project.edit</span> on that specific project
+    (see the note below). Everyone with view access can see the roster either way.</p>
+
+  <h3>Add someone who already has an account</h3>
+  <ol class="docs-steps">
+    <li>Click <strong>+ Add existing user</strong> (top right, or the card at the bottom of the page).</li>
+    <li>Pick the person, set their <strong>Side</strong> (client or our organisation), <strong>Position</strong> on
+      this project, and optionally a role description, responsibility and remarks.</li>
+    <li>Mark <strong>Is primary contact</strong> if they're the one point of contact for their side.</li>
+  </ol>
+
+  <h3>Add someone brand new</h3>
+  <p>Click <strong>+ New person</strong> instead — this creates the user account and adds them to the project in
+    one step. See <a href="#passwords">Managing passwords</a> for what happens to the password field here.</p>
+
+  <h3>Move someone between sides</h3>
+  <p>Once someone's on the roster, just <strong>drag their card</strong> from one column to the other — the switch
+    saves immediately, no form needed. On a touchscreen, tap the card once to pick it up, then tap the other column
+    to drop it.</p>
+
+  <figure class="docs-shot">
+    <div class="docs-shot-bar"><i></i><i></i><i></i><span>/projects/1/participants/</span></div>
+    <img src="{% static 'img/docs/05_participants_page.png' %}" alt="The People tab on a project, showing Client side and Our organisation columns, and the Add someone forms below">
+    <figcaption>Client side and Our organisation as two drag-and-drop columns, with Add and Edit briefs below.</figcaption>
+  </figure>
+
+  <div class="docs-callout warn">
+    <b class="lbl">If "Add someone" is missing</b>
+    <p>That section only renders when you hold <span class="docs-cap">project.edit</span> <em>on this project</em>.
+      A role can have that capability at <em>team</em> scope, which only applies if the project is assigned to your
+      team or you own it — a project with no team and a different owner won't grant access even to an otherwise
+      senior role. An administrator can fix this by setting the project's team, its owner, or by widening the role's
+      scope to <em>all</em>.</p>
+  </div>
+</section>
+
+<!-- ===================================================== 05 TIMELINE -->
+<section class="card docs-section" id="timeline">
+  <p class="docs-kicker">Capturing work · 05</p>
+  <h2>The timeline: notes, audio and documents</h2>
+  <p class="docs-dek">Everything that happens on a project — a note, a meeting recording, a spec someone emailed
+    over — goes on the timeline. It's the raw material both AI agents read from.</p>
+
+  <p class="docs-path">Project<span class="sep">→</span><strong>Timeline</strong> tab</p>
+  <p>Adding entries needs <span class="docs-cap">timeline.add</span>; reprocessing or renaming speakers needs
+    <span class="docs-cap">timeline.process</span>.</p>
+
+  <figure class="docs-shot">
+    <div class="docs-shot-bar"><i></i><i></i><i></i><span>/projects/1/timeline/</span></div>
+    <img src="{% static 'img/docs/06_timeline_page.png' %}" alt="The Timeline tab, showing the add-entry form and a list of processed entries">
+    <figcaption>The add-entry form accepts typed text, audio, PDFs, Word and PowerPoint files, or plain text formats.</figcaption>
+  </figure>
+
+  <h3>A typed note</h3>
+  <p>Pick a <strong>Kind</strong> (Note, Meeting, Decision, Change request…), type into <strong>Body</strong>, and
+    click <strong>Queue entry</strong>. It goes into the <strong>AI queue</strong>: the page shows your place in line and
+    roughly how long it will take, and you get a notification when it's done. Leave <strong>Include in BRD</strong> checked if this should feed the next BRD regeneration.</p>
+
+  <h3>An audio recording</h3>
+  <p>Attach a <code>.wav</code>, <code>.mp3</code>, <code>.m4a</code>, <code>.ogg</code> or similar file. Planwise
+    runs it through a pipeline automatically:</p>
+  <ol class="docs-steps">
+    <li><strong>Noise reduction</strong> — the recording is denoised before anything else touches it.</li>
+    <li><strong>Transcription</strong> — speech-to-text via the configured ASR model.</li>
+    <li><strong>Diarization</strong> — separates the recording into speaker turns (<code>SPEAKER_00</code>,
+      <code>SPEAKER_01</code>, …).</li>
+  </ol>
+  <p>Once it's done, open the entry and <strong>name each speaker</strong> — type a name, or map them to an existing
+    project participant. This isn't cosmetic: search and <a href="#askai">Ask AI</a> both use the name you give here,
+    so "what did the client say about budget" only works well once speakers are named.</p>
+
+  <figure class="docs-shot">
+    <div class="docs-shot-bar"><i></i><i></i><i></i><span>/entries/4/</span></div>
+    <img src="{% static 'img/docs/07_entry_detail_transcript.png' %}" alt="A finished audio entry showing the speaker-naming table and the resulting transcript with names attached">
+    <figcaption>A processed call: speakers mapped to real people, and a segment-by-segment transcript with the names already resolved.</figcaption>
+  </figure>
+
+  <h3>A document — PDF, Word, or PowerPoint</h3>
+  <p>Attach a <code>.pdf</code>, <code>.docx</code> or <code>.pptx</code> and Planwise extracts its text straight
+    into the entry — paragraphs and tables from Word, slide text and tables from PowerPoint, page text from PDF.
+    Plain text formats (<code>.txt</code>, <code>.md</code>, <code>.csv</code>, <code>.json</code>, <code>.srt</code>,
+    <code>.vtt</code>) are read as-is.</p>
+
+  <div class="docs-callout tip">
+    <b class="lbl">Scanned PDFs</b>
+    <p>Extraction reads the text layer of a PDF — a scanned image with no embedded text won't produce anything, and
+      the entry's processing log will say so plainly rather than silently leaving it blank.</p>
+  </div>
+</section>
+
+<!-- ===================================================== 06 BRD AGENT -->
+<section class="card docs-section" id="brd">
+  <p class="docs-kicker">The AI layer · 06</p>
+  <h2>The BRD agent</h2>
+  <p class="docs-dek">An LLM reads everything on the timeline and drafts the Business Requirement Document for you —
+    then keeps it in sync as new entries come in.</p>
+
+  <h3>When it writes automatically</h3>
+  <p>Right after a timeline entry finishes processing — if <strong>Include in BRD</strong> was checked — the agent
+    folds it into the document and produces a new version. For audio entries, this happens once every speaker has
+    been named, since the agent needs to know who said what first.</p>
+
+  <h3>Updating it by hand</h3>
+  <p class="docs-path">Project<span class="sep">→</span><strong>BRD</strong> tab</p>
+  <ul>
+    <li><strong>Regenerate</strong> — shows how many entries haven't been folded in yet; click to pull them all in
+      and produce a new version.</li>
+    <li><strong>Edit</strong> — hand-edit the current version directly, for wording the agent won't get right on its own.</li>
+    <li><strong>History</strong> / <strong>Compare</strong> — every regeneration is a new numbered version; compare
+      any two to see exactly what changed.</li>
+    <li><strong>Download .md</strong> — export the current version as plain Markdown.</li>
+  </ul>
+
+  <figure class="docs-shot">
+    <div class="docs-shot-bar"><i></i><i></i><i></i><span>/projects/1/brd/</span></div>
+    <img src="{% static 'img/docs/08_brd_page.png' %}" alt="The Business Requirement Document page, showing the generated document, version info, and the participants sidebar">
+    <figcaption>A generated BRD — versioned, attributed to the model that wrote it, with the full participant roster alongside for reference.</figcaption>
+  </figure>
+
+  <p>Requires <span class="docs-cap">brd.view</span> to read it, <span class="docs-cap">brd.generate</span> to
+    regenerate, and <span class="docs-cap">brd.edit</span> to hand-edit.</p>
+</section>
+
+<!-- ===================================================== 07 ASK AI -->
+<section class="card docs-section" id="askai">
+  <p class="docs-kicker">The AI layer · 07</p>
+  <h2>Ask AI</h2>
+  <p class="docs-dek">A chat assistant scoped to exactly one project — it can search that project's documents, query
+    its structured data, or both, and it streams its answer back live.</p>
+
+  <p class="docs-path">Project<span class="sep">→</span><strong>Ask AI</strong> tab</p>
+  <p>Requires <span class="docs-cap">timeline.view</span> on the project — the same permission that gates the
+    timeline itself.</p>
+
+  <figure class="docs-shot">
+    <div class="docs-shot-bar"><i></i><i></i><i></i><span>/projects/1/chat/</span></div>
+    <img src="{% static 'img/docs/09_ask_ai_chat.png' %}" alt="Ask AI, showing a streamed answer with markdown formatting, source citations, and the expandable SQL-used disclosure">
+    <figcaption>A real answer, citing the timeline entry, the BRD and the people it drew from, with the SQL it ran available on demand.</figcaption>
+  </figure>
+
+  <h3>The two switches</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Toggle</th><th>What it does</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>RAG (documents)</strong></td>
+          <td>Semantic search over notes, meeting transcripts, uploaded document text, and the BRD.</td>
+          <td>"What did we decide about X", "what does the BRD say about scope"</td>
+        </tr>
+        <tr>
+          <td><strong>DB agent (structured data)</strong></td>
+          <td>Writes and runs a read-only query against this project's tasks, people, customer and project facts.</td>
+          <td>"Who's on the client side", "what's still open", "what's the budget"</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Leave both on and the assistant picks whichever a question actually needs — many questions use both in one
+    answer. Turn one off to restrict it on purpose; turn both off for a plain conversational reply with no lookups.</p>
+
+  <h3>Reading the answer</h3>
+  <ul>
+    <li>Text streams in as it's generated, formatted as markdown — tables, bold, lists all render properly.</li>
+    <li><strong>Citation chips</strong> under an answer name exactly which document, task, or person record it drew from.</li>
+    <li><strong>SQL used</strong>, when the DB agent ran a query, is an expandable disclosure — the exact statement
+      it executed, nothing hidden.</li>
+  </ul>
+
+  <h3>Keeping it current</h3>
+  <ul>
+    <li><strong>↻ Refresh index</strong> rebuilds the document search index on demand — normally automatic after new
+      timeline content or a speaker rename, this is the manual fallback.</li>
+    <li><strong>🗑 Clear chat</strong> wipes your own conversation history for this project. It doesn't touch anyone
+      else's, and it doesn't touch the underlying documents or data.</li>
+  </ul>
+
+  <div class="docs-callout good">
+    <b class="lbl">Strictly one project at a time</b>
+    <p>The assistant can only ever see this project's own data — not just by instruction, but structurally: the
+      underlying tools have no parameter through which a different project could even be named, and the database
+      role behind the "DB agent" can only read a handful of views that are already filtered to this project before
+      your question ever reaches them.</p>
+  </div>
+
+  <details class="adder">
+    <summary>Why does it sometimes say "SPEAKER_01" instead of a name?</summary>
+    <div>
+      <p>If a diarized speaker on an audio entry hasn't been named yet (see <a href="#timeline">The timeline</a>),
+        the assistant reports them by their raw label rather than guessing who they might be. Name the speaker on
+        the entry page and ask again — the index picks up the change automatically.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ===================================================== 08 TICKETS -->
+<section class="card docs-section" id="tickets">
+  <p class="docs-kicker">Working with tickets · 08</p>
+  <h2>Raising a good ticket</h2>
+  <p class="docs-dek">A ticket is only as useful as what you put in it. Whoever picks it up — a person or an
+    agent — can only act on what's written down; they can't see your screen, your browser tab, or what you tried
+    first.</p>
+
+  <p class="docs-path">Sidebar<span class="sep">→</span>Tickets<span class="sep">→</span><strong>+ New ticket</strong>
+    <span class="sep">·</span>or from a project's <strong>Tickets</strong> tab</p>
+  <p>Requires <span class="docs-cap">ticket.create</span>. If you land here from a project, that project is filled
+    in for you automatically.</p>
+
+  <h3>Before you even open the form</h3>
+  <p>The New ticket page shows a one-time popup — <em>"Before you raise this ticket"</em> — that covers when a
+    ticket needs UI/UX Team approval first:</p>
+  <ul>
+    <li>A small change to an <strong>existing</strong> page (text, alignment, spacing, colour, icons) — raise the
+      ticket directly, no design approval needed. Just include the page's URL (see below).</li>
+    <li>A <strong>new page/screen</strong>, or a significant UI/UX change — raise a ticket to the UI/UX (Designer)
+      Team first. Only once that design is reviewed and approved should you raise the Development ticket.</li>
+    <li><strong>Non-UI</strong> work (backend logic, data, infra, a question) — raise the Development ticket
+      directly.</li>
+  </ul>
+
+  <h3>Fill the form out fully</h3>
+  <ol class="docs-steps">
+    <li><strong>Type</strong> — Bug, Change request, Feature request, Task, Question or Incident. This decides
+      whether the Bug/incident detail section below even matters.</li>
+    <li><strong>Title</strong> — one line that names the actual problem, not just the symptom. "Save button on the
+      invoice form does nothing after a discount is applied" beats "Save doesn't work".</li>
+    <li><strong>Team</strong> — narrows who shows up in <strong>Assignee</strong> to that team's members. Set this
+      before picking an assignee, not after.</li>
+    <li><strong>Priority</strong> (and <strong>Severity</strong>, for a bug or incident) — how urgent, and how bad
+      the impact is if it's not fixed.</li>
+    <li><strong>Due date</strong> — optional, but worth setting if this is blocking something with a real deadline.</li>
+  </ol>
+
+  <div class="docs-callout tip">
+    <b class="lbl">Write the description like the reader has never seen your screen</b>
+    <p>Because they haven't. The single biggest thing that makes a ticket fast to solve — by a person or an AI
+      agent — is giving it everything it would otherwise have to come back and ask you for.</p>
+  </div>
+
+  <h3>What a complete description includes</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Include this</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>The exact page URL</strong> where the issue happens or the change is needed</td>
+          <td>Saves the reader from hunting for the right screen — paste it straight from the browser's address
+            bar, e.g. <code>https://planwise.augtrans.com/projects/79/edit/</code>. For an app-wide or non-UI issue,
+            say so instead of leaving it blank.</td>
+        </tr>
+        <tr>
+          <td><strong>What you did</strong>, step by step, in order</td>
+          <td>"Click X, then Y, then Z" reproduces the exact conditions instead of leaving the reader to guess a
+            path that happens to trigger it. Bug and incident tickets have a dedicated <strong>Steps to
+            reproduce</strong> field for this — use it.</td>
+        </tr>
+        <tr>
+          <td><strong>What you expected</strong> vs. <strong>what actually happened</strong></td>
+          <td>Also dedicated fields (<strong>Expected result</strong> / <strong>Actual result</strong>) on bug and
+            incident tickets. Stating both removes any ambiguity about what "fixed" even looks like.</td>
+        </tr>
+        <tr>
+          <td><strong>Environment</strong> — browser, OS, app version, account/role you were using</td>
+          <td>A lot of bugs are specific to one browser, one role's permissions, or one screen size. Without this,
+            the reader may not even be able to reproduce it.</td>
+        </tr>
+        <tr>
+          <td><strong>A screenshot or screen recording</strong></td>
+          <td>Attach it rather than describing a layout or an error banner in words — a picture of the exact state
+            of the page removes a whole round of back-and-forth. See Attachments below.</td>
+        </tr>
+        <tr>
+          <td><strong>Anything you already tried</strong></td>
+          <td>Stops the reader from re-treading a workaround or a fix you already ruled out.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Attachments — screenshots, logs, recordings</h3>
+  <p>The form's <strong>Attachments</strong> field on the New ticket page takes up to <strong>10 files, 10 MB
+    each</strong>. Anything relevant helps: <code>.png / .jpg / .gif / .webp / .svg</code> screenshots,
+    <code>.mp4 / .mov / .webm</code> short screen recordings, <code>.log / .txt / .csv / .json / .har</code> for
+    errors or network traces, or a <code>.pdf</code>. On an existing ticket, uploading more attachments adds to what's
+    already there rather than replacing it.</p>
+
+  <div class="docs-callout good">
+    <b class="lbl">Good vs. thin</b>
+    <p><strong>Thin:</strong> "Login page is broken."<br>
+      <strong>Good:</strong> "On <code>/login/</code>, entering a correct username/password and clicking Sign in
+      shows a spinner forever and never redirects (Chrome, Windows). Expected: redirect to the dashboard. Tried a
+      hard refresh and an incognito window — same result both times. Screenshot of the stuck spinner attached, plus
+      the failed request from the browser console."</p>
+  </div>
+
+  <div class="docs-callout warn">
+    <b class="lbl">Why this matters more than it looks like</b>
+    <p>A ticket with a URL, clear steps, expected/actual behaviour and a screenshot can often be acted on
+      immediately — no clarifying questions, no waiting on you to reply. A ticket that just says something is
+      "broken" or "needs fixing" usually comes back to you for the details above before any real work can start —
+      whether the person picking it up is on the team or an AI agent reading the ticket.</p>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/docs.js' %}"></script>{% endblock %}

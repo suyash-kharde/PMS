@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{% if customer %}Edit {{ customer.name }}{% else %}New customer{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% if customer %}Edit {{ customer.name }}{% else %}New customer{% endif %}</h1></div>
+<form class="card form-grid" method="post">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+  {% for field in form %}
+    <label class="field {% if field.name in 'description,notes' %}span-2{% endif %}">
+      <span>{{ field.label }}</span>{{ field }}
+      {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+      {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+    </label>
+  {% endfor %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">Save customer</button>
+    <a class="btn btn-ghost" href="{% if customer %}{{ customer.get_absolute_url }}{% else %}{% url 'projects:customer_list' %}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var select = document.getElementById("id_industry");
+  var other = document.getElementById("id_industry_other");
+  if (!select || !other) return;
+  var box = other.closest("label");
+  function sync() { box.style.display = select.value === "__other__" ? "" : "none"; }
+  select.addEventListener("change", function () {
+    sync();
+    if (select.value === "__other__") other.focus();
+  });
+  sync();
+})();
+</script>
+{% endblock %}

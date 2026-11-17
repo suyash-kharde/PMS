@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Project Links · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<style>
+  .pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+  .pl-card{padding:16px;display:flex;flex-direction:column;gap:10px}
+  .pl-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .pl-head h3{margin:0;font-size:16px}
+  .pl-url{display:block;word-break:break-all;font-size:13px}
+  .pl-cred{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)}
+  .pl-cred dt{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .pl-cred dd{margin:0;display:flex;align-items:center;gap:8px;min-width:0}
+  .pl-cred code{font-size:13px;word-break:break-all}
+  .pl-mini{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:6px;padding:2px 8px;font-size:11.5px;cursor:pointer}
+  .pl-mini:hover{border-color:var(--primary);color:var(--primary)}
+  .pl-actions{margin-top:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pl-actions form{margin:0}
+  .pl-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px 0}
+  .pl-form .span-2{grid-column:1/-1}
+  .pl-gw{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin:0;display:flex;flex-direction:column;gap:6px}
+  .pl-gw p{margin:0}
+  .pl-gw-toggle{display:flex;gap:8px;align-items:center}
+  .pl-gw-body{display:flex;flex-direction:column;gap:8px}
+  .pl-gw-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;font-size:13px;margin:8px 0}
+  .pl-gw-adv summary{cursor:pointer;color:var(--muted)}
+  .pl-via{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--primary) 10%,transparent);color:var(--primary)}
+  .pl-via.is-err{background:color-mix(in srgb,var(--warn) 18%,transparent);color:#b45309}
+  @media (max-width:640px){.pl-form{grid-template-columns:1fr}}
+</style>
+
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Project Links</p>
+    <h1>{{ project.key }} · Project Links</h1>
+    <p class="muted">Where this project runs — open it from here, and sign in with the sample login if one is saved.</p>
+  </div>
+</div>
+{% include "_project_tabs.html" %}
+
+{% if can_edit %}
+<details class="card" style="padding:14px 16px;margin-bottom:14px" {% if not links %}open{% endif %}>
+  <summary class="btn btn-primary btn-sm" style="display:inline-block">+ Add a link</summary>
+  <form class="pl-form" method="post" action="{% url 'projects:project_link_add' project.pk %}" autocomplete="off">
+    {% csrf_token %}
+    <label class="field"><span>{{ form.title.label }}</span>{{ form.title }}</label>
+    <label class="field"><span>{{ form.url.label }}</span>{{ form.url }}</label>
+    <label class="field"><span>{{ form.username.label }}</span>{{ form.username }}</label>
+    <label class="field"><span>{{ form.password.label }}</span>{{ form.password }}</label>
+    <label class="field span-2"><span>{{ form.notes.label }}</span>{{ form.notes }}</label>
+    {% include "projects/_link_gateway_fields.html" with f=form %}
+    <p class="muted small span-2" style="margin:0">Sample username and password are optional. Use test accounts only — the password is stored encrypted, but everyone on this project can reveal it.</p>
+    <div class="span-2"><button class="btn btn-primary" type="submit">Save link</button></div>
+  </form>
+</details>
+{% endif %}
+
+<div class="pl-grid">
+  {% for link, edit_form in links %}
+    <section class="card pl-card">
+      <div class="pl-head">
+        <div><h3>{{ link.title }}</h3>
+          {% if link.via_gateway %}
+            <a class="pl-url" href="{{ link.open_url }}" target="_blank" rel="noopener">{{ request.get_host }}{{ link.open_url }}</a>
+            <small class="muted pl-url">Direct (VPN): <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a></small>
+          {% else %}
+            <a class="pl-url" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.url }}</a>
+          {% endif %}</div>
+        {% if link.via_gateway %}
+          {% if link.gateway_error %}<span class="pl-via is-err" title="{{ link.gateway_error }}">Not live yet</span>
+          {% else %}<span class="pl-via" title="Works outside the VPN for signed-in project members">Through Planwise</span>{% endif %}
+        {% endif %}
+      </div>
+      {% if link.via_gateway and link.gateway_error and can_edit %}<p class="muted small" style="margin:0">{{ link.gateway_error }}</p>{% endif %}
+
+      {% if link.username or link.password %}
+        <dl class="pl-cred">
+          {% if link.username %}
+            <dt>Username</dt>
+            <dd><code>{{ link.username }}</code><button type="button" class="pl-mini" data-copy="{{ link.username }}">Copy</button></dd>
+          {% endif %}
+          {% if link.password %}
+            <dt>Password</dt>
+            <dd><code data-pw-text>••••••••</code>
+              <button type="button" class="pl-mini" data-pw-show data-url="{% url 'projects:project_link_password' project.pk link.pk %}">Show</button>
+              <button type="button" class="pl-mini" data-pw-copy data-url="{% url 'projects:project_link_password' project.pk link.pk %}">Copy</button></dd>
+          {% endif %}
+        </dl>
+      {% endif %}
+      {% if link.notes %}<p class="muted small" style="margin:0;white-space:pre-line">{{ link.notes }}</p>{% endif %}
+
+      <div class="pl-actions">
+        <a class="btn btn-primary btn-sm" href="{{ link.open_url }}" target="_blank" rel="noopener{% if not link.via_gateway %} noreferrer{% endif %}">Open site ↗</a>
+        {% if can_edit %}
+          <form method="post" action="{% url 'projects:project_link_delete' project.pk link.pk %}"
+                data-confirm="Remove {{ link.title }} from {{ project.key }}?">{% csrf_token %}
+            <button class="btn btn-sm btn-delete" type="submit">🗑 Delete</button>
+          </form>
+        {% endif %}
+      </div>
+
+      {% if can_edit %}
+        <details>
+          <summary class="btn btn-ghost btn-sm" style="display:inline-block">✎ Edit</summary>
+          <form class="pl-form" method="post" action="{% url 'projects:project_link_save' project.pk link.pk %}" autocomplete="off">
+            {% csrf_token %}
+            <label class="field"><span>{{ edit_form.title.label }}</span>{{ edit_form.title }}</label>
+            <label class="field"><span>{{ edit_form.url.label }}</span>{{ edit_form.url }}</label>
+            <label class="field"><span>{{ edit_form.username.label }}</span>{{ edit_form.username }}</label>
+            <label class="field"><span>{{ edit_form.password.label }}</span>{{ edit_form.password }}
+              <small class="muted">{% if link.password %}A password is saved — leave empty to keep it.{% endif %}</small></label>
+            <label class="field span-2"><span>{{ edit_form.notes.label }}</span>{{ edit_form.notes }}</label>
+            {% if link.password %}<label class="span-2 small"><input type="checkbox" name="{{ edit_form.clear_password.html_name }}"> {{ edit_form.clear_password.label }}</label>{% endif %}
+            {% include "projects/_link_gateway_fields.html" with f=edit_form %}
+            <div class="span-2"><button class="btn btn-primary" type="submit">Save</button></div>
+          </form>
+        </details>
+      {% endif %}
+    </section>
+  {% empty %}
+    <p class="empty card" style="padding:24px;grid-column:1/-1">No links yet.{% if can_edit %} Add the site's address above and anyone on {{ project.key }} can open it from here.{% else %} Ask someone who can edit this project to add them.{% endif %}</p>
+  {% endfor %}
+</div>
+
+<script>
+(function () {
+  function fetchPassword(btn) {
+    return fetch(btn.dataset.url, { method: "POST", headers: { "X-CSRFToken": window.PMS.csrf() } })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (d) { return d.password || ""; });
+  }
+  function copy(text, btn) {
+    var done = function () { var old = btn.textContent; btn.textContent = "Copied"; setTimeout(function () { btn.textContent = old; }, 1200); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done);
+    else { var t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); done(); }
+  }
+  document.querySelectorAll("[data-gw-toggle]").forEach(function (box) {
+    var body = box.closest(".pl-gw").querySelector("[data-gw-body]");
+    var name = body.querySelector("input[name$='site_name']");
+    box.addEventListener("change", function () {
+      body.hidden = !box.checked;
+      if (box.checked && name && !name.value) {
+        var title = box.closest("form").querySelector("input[name$='title']");
+        name.value = ("{{ project.key|lower }}_" + (title ? title.value : "site")).toLowerCase()
+          .replace(/[^a-z0-9_-]+/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 32);
+      }
+    });
+  });
+  document.querySelectorAll("[data-copy]").forEach(function (b) { b.addEventListener("click", function () { copy(b.dataset.copy, b); }); });
+  document.querySelectorAll("[data-pw-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      fetchPassword(b).then(function (pw) { copy(pw, b); }).catch(function () { window.PMS.toast("Couldn't read the password.", "error"); });
+    });
+  });
+  document.querySelectorAll("[data-pw-show]").forEach(function (b) {
+    var shown = false, text = b.parentNode.querySelector("[data-pw-text]");
+    b.addEventListener("click", function () {
+      if (shown) { text.textContent = "••••••••"; b.textContent = "Show"; shown = false; return; }
+      fetchPassword(b).then(function (pw) { text.textContent = pw || "(empty)"; b.textContent = "Hide"; shown = true; })
+        .catch(function () { window.PMS.toast("Couldn't read the password.", "error"); });
+    });
+  });
+})();
+</script>
+{% endblock %}

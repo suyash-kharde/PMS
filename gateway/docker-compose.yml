@@ -1,0 +1,21 @@
+services:
+  gateway:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "443:8443"
+    environment:
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env}
+      TLS: "true"
+      GW_DEBUG_AUTH: ${GW_DEBUG_AUTH:-0}
+      # IPs/hostnames put into the self-signed cert SAN
+      TLS_HOSTS: ${TLS_HOSTS:-172.16.15.111}
+      # use your own cert instead of self-signed:
+      # CERT_FILE: /certs/cert.pem
+      # KEY_FILE: /certs/key.pem
+    volumes:
+      - gateway-data:/data
+      # - ./certs:/certs:ro
+
+volumes:
+  gateway-data:

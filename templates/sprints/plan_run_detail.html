@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load jobs %}
+{% load static %}
+{% block title %}Sprint plan generation #{{ run.pk }} · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'sprints:sprint_list' %}?project={{ project.pk }}">Sprints</a> / Generation #{{ run.pk }}
+    </p>
+    <h1>✦ Sprint plan generation</h1>
+    <p class="muted">
+      <span class="badge status-{{ run.status }}" data-run-status>{{ run.get_status_display }}</span>
+      <span data-run-phase>{{ run.phase }}</span>
+      · started {{ run.created_at|date:"d M Y, H:i" }}
+      {% if run.requested_by %}· by {{ run.requested_by.display_name }}{% endif %}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if not run.is_terminal %}
+      <form method="post" action="{% url 'sprints:plan_run_cancel' run.pk %}">{% csrf_token %}
+        <button class="btn btn-ghost" type="submit">Cancel run</button>
+      </form>
+    {% endif %}
+    <span data-done-actions {% if not run.is_terminal %}hidden{% endif %}>
+      <a class="btn btn-primary" href="{% url 'sprints:sprint_list' %}?project={{ project.pk }}">View sprints</a>
+      {% if can_discard %}
+        <form method="post" action="{% url 'sprints:plan_run_discard' run.pk %}" data-confirm="Delete every sprint, requirement, test case and service this run created?" style="display:inline">{% csrf_token %}
+          <button class="btn btn-danger" type="submit">Discard run</button>
+        </form>
+      {% endif %}
+    </span>
+  </div>
+</div>
+{% job_banners target=run kinds="sprint_plan" %}
+
+{% include "_project_tabs.html" %}
+
+<div class="gen-counts" data-counts>
+  <span class="pill">Sprints <b data-count="sprints">{{ run.result.sprints|default:0 }}</b></span>
+  <span class="pill">Requirements <b data-count="requirements">{{ run.result.requirements|default:0 }}</b></span>
+  <span class="pill">Criteria <b data-count="criteria">{{ run.result.criteria|default:0 }}</b></span>
+  <span class="pill">Field specs <b data-count="field_specs">{{ run.result.field_specs|default:0 }}</b></span>
+  <span class="pill">Test cases <b data-count="test_cases">{{ run.result.test_cases|default:0 }}</b></span>
+  <span class="pill">Risks <b data-count="risks">{{ run.result.risks|default:0 }}</b></span>
+  <span class="pill">Dependencies <b data-count="dependencies">{{ run.result.dependencies|default:0 }}</b></span>
+  <span class="pill">Services <b data-count="services">{{ run.result.services|default:0 }}</b></span>
+</div>
+
+<div class="grid-side">
+  <section class="card">
+    <header class="card-head"><h2>Steps</h2></header>
+    <ul class="list gen-steps" data-steps>
+      {% for s in steps %}
+        <li class="list-row" data-step="{{ s.key }}">
+          <span class="step-ico {% if s.status == 'running' %}step-run{% endif %}" data-step-ico>
+            {% if s.status == 'done' %}✓{% elif s.status == 'failed' %}✗{% elif s.status == 'running' %}◔{% elif s.status == 'skipped' %}–{% else %}○{% endif %}
+          </span>
+          <span class="grow">
+            <strong data-step-label>{{ s.label }}</strong>
+            <br><span class="muted small" data-step-detail>{{ s.detail }}</span>
+          </span>
+        </li>
+      {% empty %}
+        <li class="empty" data-steps-empty>Queued — waiting for the worker…</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <header class="card-head"><h2>Summary</h2></header>
+      <p class="prose" data-summary>{{ run.summary|default:"—" }}</p>
+      {% if run.error %}<p class="err" data-error>{{ run.error }}</p>{% else %}<p class="err" data-error hidden></p>{% endif %}
+      <p class="muted small">Sources: {{ run.sources.build_plan.origin|default:"—" }} build plan ·
+        {{ run.sources.dev_instructions.origin|default:"—" }} dev instructions ·
+        BRD {% if run.sources.brd.present %}v{{ run.sources.brd.version }}{% else %}none{% endif %}</p>
+    </section>
+
+    {% if run.research %}
+      <section class="card research-brief">
+        <header class="card-head"><h2>Research brief</h2></header>
+        <p class="prose">{{ run.research.overview }}</p>
+        {% if run.research.build_phases %}
+          <h4>Build phases</h4>
+          <ul>{% for p in run.research.build_phases %}<li><strong>{{ p.name }}</strong> — {{ p.goal }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if run.research.functional_areas %}
+          <h4>Functional areas</h4>
+          <ul>{% for a in run.research.functional_areas %}<li><strong>{{ a.name }}</strong> — {{ a.summary }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if run.research.external_services %}
+          <h4>External services</h4>
+          <ul>{% for s in run.research.external_services %}<li>{{ s.name }} ({{ s.provided_by }}) — {{ s.why }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if run.research.risks %}
+          <h4>Risks</h4>
+          <ul>{% for r in run.research.risks %}<li><strong>{{ r.title }}</strong> — {{ r.why }}</li>{% endfor %}</ul>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    <section class="card">
+      <header class="card-head"><h2>Log</h2></header>
+      <pre class="log" data-log>{{ run.log|default:"—" }}</pre>
+    </section>
+  </aside>
+</div>
+
+<div data-status-url="{% url 'sprints:api_plan_run_status' run.pk %}" data-terminal="{{ run.is_terminal|yesno:'1,0' }}" id="planRun"></div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/sprint_plan.js' %}"></script>{% endblock %}

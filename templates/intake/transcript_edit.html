@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Edit transcript · {{ entry.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'intake:timeline' project.pk %}">Timeline</a> /
+      <a href="{% url 'intake:entry_detail' entry.pk %}">{{ entry.title }}</a> / Transcript</p>
+    <h1>Edit transcript</h1>
+    <p class="muted">Fix what the ASR misheard, move a line to a different speaker, or drop it. Saving marks the entry for re-sync.</p>
+  </div>
+  <div class="row-actions">
+    <a class="btn btn-ghost" href="{% url 'intake:entry_detail' entry.pk %}">Back to entry</a>
+  </div>
+</div>
+
+<div class="tag-row">
+  {% for s in speakers %}
+    <span class="chip" style="--c:{% if s.is_named %}#22c55e{% else %}#f59e0b{% endif %}">
+      {{ s.label }} = {{ s.resolved_name }}</span>
+  {% endfor %}
+</div>
+
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="table-wrap">
+    <table class="table transcript-table">
+      <thead><tr><th style="width:52px">#</th><th style="width:150px">Speaker</th><th style="width:150px">Start / end</th><th>Text</th><th style="width:60px">Drop</th></tr></thead>
+      <tbody>
+        {% for segment, form in segment_forms %}
+          <tr>
+            <td class="muted small">{{ forloop.counter }}</td>
+            <td>{{ form.speaker_label }}</td>
+            <td class="times">{{ form.start }}{{ form.end }}</td>
+            <td>{{ form.text }}{% if form.errors %}<em class="err">{{ form.errors.as_text }}</em>{% endif %}</td>
+            <td><input type="checkbox" name="seg{{ segment.pk }}-delete" title="Delete this line"></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="empty">No transcript lines yet.</td></tr>
+        {% endfor %}
+        <tr class="new-row">
+          <td class="muted small">+</td>
+          <td>
+            <select name="new-speaker">
+              {% for label in labels %}<option value="{{ label }}">{{ label }}</option>{% endfor %}
+            </select>
+          </td>
+          <td class="times">
+            <input type="number" name="new-start" step="0.1" min="0" placeholder="start">
+            <input type="number" name="new-end" step="0.1" min="0" placeholder="end">
+          </td>
+          <td><textarea name="new-text" rows="2" placeholder="Add a missing line…"></textarea></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Save transcript</button>
+    <a class="btn btn-ghost" href="{% url 'intake:entry_detail' entry.pk %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

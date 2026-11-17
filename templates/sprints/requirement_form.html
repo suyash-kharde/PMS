@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{% if requirement %}Edit {{ requirement.key }}{% else %}New requirement{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'sprints:sprint_list' %}">Sprints</a> /
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a>
+      {% if sprint %} / <a href="{{ sprint.get_absolute_url }}">{{ sprint.key }}</a>{% endif %}
+      {% if requirement %} / <a href="{{ requirement.get_absolute_url }}">{{ requirement.key }}</a>{% endif %}
+    </p>
+    <h1>{% if requirement %}Edit {{ requirement.key }}{% else %}New requirement{% endif %}</h1>
+    {% if not requirement %}<p class="muted">Leave the sprint empty to keep it in the {{ project.key }} backlog.</p>{% endif %}
+  </div>
+</div>
+
+<form class="card form-grid" method="post">
+  {% csrf_token %}
+  {% include "sprints/_form_body.html" %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">{% if requirement %}Save{% else %}Create requirement{% endif %}</button>
+    <a class="btn btn-ghost" href="{% if requirement %}{{ requirement.get_absolute_url }}{% elif sprint %}{{ sprint.get_absolute_url }}{% else %}{% url 'sprints:requirement_list' project.pk %}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

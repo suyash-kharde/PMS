@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if ticket %}Edit {{ ticket.key }}{% else %}New ticket{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'tickets:list' %}">Tickets</a>
+      {% if project %} / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a>{% endif %}
+    </p>
+    <h1>{% if ticket %}Edit {{ ticket.key }}{% else %}Raise a ticket{% endif %}</h1>
+    {% if not ticket %}<p class="muted">Report a bug, request a change, or ask a question about the project.</p>{% endif %}
+  </div>
+</div>
+
+<form class="card form-grid" method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error span-2">{{ form.non_field_errors }}</div>{% endif %}
+
+  {% for field in form %}
+    {% if field.is_hidden %}{{ field }}
+    {% elif field.name in bug_fields %}
+    {% else %}
+      <label class="field {% if field.name == 'description' or field.name == 'title' %}span-2{% endif %}">
+        <span>{{ field.label }}{% if field.field.required %} *{% endif %}</span>{{ field }}
+        {% if field.help_text %}<em class="muted small">{{ field.help_text }}</em>{% endif %}
+        {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+      </label>
+    {% endif %}
+  {% endfor %}
+
+  <details class="span-2 tkt-bugfields" {% if not ticket or ticket.is_bugish %}open{% endif %}>
+    <summary>Bug / incident detail — optional</summary>
+    <div class="form-grid">
+      {% for field in form %}
+        {% if field.name in bug_fields %}
+          <label class="field {% if field.name == 'steps_to_reproduce' %}span-2{% endif %}">
+            <span>{{ field.label }}</span>{{ field }}
+            {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+          </label>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </details>
+
+  <label class="field span-2">
+    <span>Attachments — screenshots, logs, HAR files{% if ticket %} (adds to existing){% endif %}</span>
+    <input type="file" name="attachments" multiple>
+    <em class="muted small">Any file type (screenshots, logs, HAR, .penpot, …). Up to 10 files, 10 MB each.</em>
+  </label>
+
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">{% if ticket %}Save{% else %}Raise ticket{% endif %}</button>
+    <a class="btn btn-ghost" href="{% if ticket %}{{ ticket.get_absolute_url }}{% elif project %}{{ project.get_absolute_url }}{% else %}{% url 'tickets:list' %}{% endif %}">Cancel</a>
+  </div>
+</form>
+
+<script>
+  (function () {
+    var teamSelect = document.getElementById("id_team");
+    var assigneeSelect = document.getElementById("id_assignee");
+    if (!teamSelect || !assigneeSelect) return;
+    // Only when the project is picked on this page: {project id: [assignable user ids]}.
+    // A project missing from it has no internal members, so anyone on staff can be assigned.
+    var projectSelect = document.getElementById("id_project");
+    var projectMembers = assigneeSelect.dataset.projectMembers ? JSON.parse(assigneeSelect.dataset.projectMembers) : null;
+    var blank = assigneeSelect.querySelector('option[value=""]');
+    var blankText = blank ? blank.textContent : "";
+
+    function projectAllows() {
+      // -> null (no project narrowing), "none" (no project chosen yet) or the allowed ids as strings
+      if (!projectMembers || !projectSelect || projectSelect.tagName !== "SELECT") return null;
+      if (!projectSelect.value) return "none";
+      var ids = projectMembers[projectSelect.value];
+      return ids ? ids.map(String) : null;
+    }
+
+    // Who is listed in Assignee:
+    //  - project members and the always-available people (data-pinned) are never hidden by the Team filter;
+    //  - when a team is picked, that team's people are listed too, so anyone on a team can be assigned;
+    //  - without a team, a project that has members lists only those people (everyone else is data-extra).
+    function applyFilter(initial) {
+      var teamId = teamSelect.value;
+      var allowed = projectAllows();
+      assigneeSelect.disabled = allowed === "none";
+      if (blank) blank.textContent = allowed === "none" ? "Pick a project first" : blankText;
+      var options = assigneeSelect.querySelectorAll("option");
+      var selectedStillValid = false;
+      options.forEach(function (opt) {
+        if (!opt.value) { selectedStillValid = true; return; } // keep the blank "unassigned" choice
+        var show;
+        if (allowed === "none") {
+          show = false;
+        } else if (allowed === null) {
+          // the list exactly as the server rendered it (project already fixed on this page)
+          if (opt.dataset.pinned === "1") show = true;
+          else if (teamId) show = opt.dataset.team === teamId;
+          else show = !opt.dataset.extra;
+        } else {
+          // project picked on this page: its people stay; picking a team adds that team's people
+          show = allowed.indexOf(opt.value) !== -1 || (!!teamId && opt.dataset.team === teamId);
+        }
+        if (initial === true && opt.defaultSelected) show = true; // a saved assignee stays selectable when the page opens
+        opt.hidden = !show;
+        opt.disabled = !show;
+        if (show && opt.selected) selectedStillValid = true;
+      });
+      if (!selectedStillValid) assigneeSelect.value = "";
+      assigneeSelect.dispatchEvent(new Event("refresh"));  // the search box re-reads the list and selection
+    }
+    teamSelect.addEventListener("change", function () { applyFilter(false); });
+    if (projectSelect && projectSelect.tagName === "SELECT") projectSelect.addEventListener("change", function () { applyFilter(false); });
+    applyFilter(true);
+  })();
+</script>
+
+{% if not ticket %}
+  <dialog class="note-dialog" id="new-ticket-note-dialog" aria-labelledby="new-ticket-note-title">
+    <header class="note-dialog-head">
+      <div><h3 id="new-ticket-note-title">Before you raise this ticket</h3></div>
+    </header>
+    <div class="note-dialog-body">
+      <div class="note-block">
+        <strong>Changes to an existing UI/page</strong>
+        <p>Provide the URL of the existing page where the UI changes are required before raising the ticket.</p>
+        <p>If it's a simple update — text changes, alignment, spacing, colors, icons, etc. — you can raise the
+          UI ticket directly. UI/UX Team approval is not required for these minor changes.</p>
+      </div>
+      <div class="note-block">
+        <strong>New UI design or major UI changes</strong>
+        <p>If the request involves creating a new page/screen or significant UI/UX changes, you must first raise
+          a ticket to the UI/UX (Designer) Team. After the design is reviewed and approved, you can proceed with
+          raising the Development Ticket.</p>
+      </div>
+      <div class="note-block">
+        <strong>Non-UI changes</strong>
+        <p>If the request does not involve any UI changes, you can directly raise the Development Ticket.</p>
+      </div>
+    </div>
+    <footer class="note-dialog-foot">
+      <a class="btn btn-ghost" href="{% if project %}{{ project.get_absolute_url }}{% else %}{% url 'tickets:list' %}{% endif %}">Cancel</a>
+      <button class="btn btn-primary" type="button" data-note-continue>Continue</button>
+    </footer>
+  </dialog>
+  <script>
+    (function () {
+      var dialog = document.getElementById("new-ticket-note-dialog");
+      if (!dialog || !dialog.showModal) return;
+      dialog.querySelector("[data-note-continue]").addEventListener("click", function () { dialog.close(); });
+      dialog.showModal();
+    })();
+  </script>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/tickets.js' %}"></script>{% endblock %}

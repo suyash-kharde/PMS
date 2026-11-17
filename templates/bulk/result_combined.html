@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Combined import result · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'bulk:home' %}">Bulk import</a> / Result</p>
+    <h1>Combined import complete</h1>
+    <p class="muted">{{ batch.created_count }} created, {{ batch.skipped_count }} skipped, committed {{ batch.committed_at|date:"d M Y, H:i" }}.</p>
+  </div>
+</div>
+
+{% if not has_created %}
+  <div class="alert alert-warning">This batch was already viewed once — the created list is only shown right after import.</div>
+{% else %}
+  {% for section in sections %}
+    {% if section.created %}
+      <section class="card">
+        <header class="card-head"><h2>{{ section.label }}</h2><span class="pill">{{ section.created|length }} created</span></header>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Row</th><th>Name</th>{% if section.kind == 'people' %}<th>Temporary password</th>{% endif %}<th></th></tr></thead>
+            <tbody>
+              {% for c in section.created %}
+                <tr>
+                  <td>{{ c.row }}</td>
+                  <td>{{ c.label }}</td>
+                  {% if section.kind == 'people' %}
+                    <td>{% if c.generated_password %}<code>{{ c.generated_password }}</code> <span class="muted small">share over a secure channel</span>{% else %}<span class="muted small">as provided</span>{% endif %}</td>
+                  {% endif %}
+                  <td><a class="btn btn-sm" href="{{ c.url }}">Open</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+<a class="btn btn-primary" href="{% url 'bulk:home' %}">Back to bulk import</a>
+{% endblock %}

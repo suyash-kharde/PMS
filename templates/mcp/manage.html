@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Claude Code · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Claude Code</p>
+    <h1>Claude Code / MCP access</h1>
+    <p class="muted">
+      Each link below is a project-scoped MCP server for Claude Code. It exposes this
+      project's Ask AI / RAG, tickets and sprint data — and nothing from any other project.
+    </p>
+  </div>
+</div>
+
+{% include "_project_tabs.html" %}
+
+{% if new_link %}
+  <section class="card" style="border-color:var(--accent,#6366f1)">
+    <header class="card-head"><h2>New link — copy it now</h2></header>
+    <p class="muted small">This is the only time the full link is shown. Store it somewhere safe.</p>
+    <div class="row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <code class="mcp-link" style="flex:1;min-width:280px;word-break:break-all;padding:8px 10px;background:var(--surface-2,#f1f5f9);border-radius:6px">{{ new_link }}</code>
+      <button class="btn" type="button" data-copy="{{ new_link }}">Copy link</button>
+    </div>
+    <p class="small" style="margin-top:10px">Add it to Claude Code with:</p>
+    <pre class="mcp-cmd"><code data-copy="claude mcp add --transport http planwise-{{ project.key|lower }} {{ new_link }}">claude mcp add --transport http planwise-{{ project.key|lower }} {{ new_link }}</code></pre>
+  </section>
+{% endif %}
+
+<section class="card">
+  <header class="card-head"><h2>Create a link</h2></header>
+  <form method="post" action="{% url 'mcp:token_create' project.pk %}" class="form-grid">
+    {% csrf_token %}
+    <label class="field">
+      <span>Name</span>
+      <input type="text" name="name" value="Claude Code" maxlength="120">
+    </label>
+    <label class="field checkbox">
+      <input type="checkbox" name="allow_ticket_write">
+      <span>Allow ticket writes — comment on tickets, change status, raise bugs</span>
+    </label>
+    <label class="field checkbox">
+      <input type="checkbox" name="allow_sprint_write">
+      <span>Allow sprint writes — requirement status, test-case results, acceptance criteria</span>
+    </label>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Create link</button>
+    </div>
+  </form>
+  <p class="muted small">
+    Links are read-only unless a write scope is ticked. Every action still respects your own
+    permissions on this project, and is recorded in the project activity log.
+  </p>
+</section>
+
+<section class="card">
+  <header class="card-head"><h2>Links</h2></header>
+  {% if tokens %}
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>Prefix</th><th>Scope</th><th>Created by</th><th>Last used</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for t in tokens %}
+          <tr {% if not t.is_active %}class="muted"{% endif %}>
+            <td>{{ t.name }}</td>
+            <td><code>{{ t.token_prefix }}…</code></td>
+            <td class="small">
+              {% if t.allow_ticket_write %}<span class="badge">tickets</span>{% endif %}
+              {% if t.allow_sprint_write %}<span class="badge">sprints</span>{% endif %}
+              {% if not t.allow_ticket_write and not t.allow_sprint_write %}read-only{% endif %}
+            </td>
+            <td>{{ t.created_by.display_name|default:"—" }}</td>
+            <td class="small">{% if t.last_used_at %}{{ t.last_used_at|date:"d M Y, H:i" }}{% else %}never{% endif %}</td>
+            <td>
+              {% if t.status_label == 'active' %}<span class="badge badge-active">active</span>
+              {% else %}<span class="badge badge-on_hold">{{ t.status_label }}</span>{% endif %}
+            </td>
+            <td>
+              {% if t.is_active %}
+                <form method="post" action="{% url 'mcp:token_revoke' project.pk t.pk %}"
+                      data-confirm="Revoke “{{ t.name }}”? Claude Code will lose access immediately.">
+                  {% csrf_token %}
+                  <button class="btn btn-ghost btn-danger" type="submit">Revoke</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">No links yet. Create one above, then add it to Claude Code.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <header class="card-head"><h2>What Claude Code can do with a link</h2></header>
+  <ul class="list">
+    <li class="list-row"><span class="grow"><strong>Ask AI / RAG</strong> — <code>search_docs</code>, <code>ask_project</code>, <code>query_data</code>, <code>get_document</code> (tech stack, dev instructions, build plan, BRD)</span></li>
+    <li class="list-row"><span class="grow"><strong>Tickets</strong> — <code>list_tickets</code>, <code>get_ticket</code>, and with ticket writes <code>comment_ticket</code>, <code>set_ticket_status</code>, <code>create_ticket</code></span></li>
+    <li class="list-row"><span class="grow"><strong>Sprints</strong> — <code>list_requirements</code>, <code>get_requirement</code> (acceptance criteria + field specs), <code>list_test_cases</code>, <code>list_external_services</code>, and with sprint writes <code>set_requirement_status</code>, <code>record_test_result</code>, <code>add_acceptance_criterion</code></span></li>
+    <li class="list-row"><span class="grow"><strong>Dev Log</strong> — <code>push_dev_update</code>, <code>update_dev_update</code>, <code>list_dev_updates</code>, <code>list_dev_milestones</code> — progress Claude Code reports shows on the project's Dev Log tab</span></li>
+  </ul>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/mcp.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Logged in now · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'core:dashboard' %}">Dashboard</a> / Logged in now</p>
+    <h1>Logged in now</h1>
+    <p class="muted">Active within the last 2 hours — the same window the app uses before signing someone out for inactivity.</p>
+  </div>
+</div>
+
+<section class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Status</th><th>Last active</th></tr></thead>
+    <tbody>
+      {% for person in people %}
+        <tr>
+          <td><a href="{% url 'accounts:user_detail' person.pk %}">
+            <span class="avatar avatar-sm" style="--c:{{ person.color }}">{{ person.initials }}</span> {{ person.display_name }}</a></td>
+          <td>{{ person.role.name|default:"—" }}</td>
+          <td>{{ person.team.name|default:"—" }}</td>
+          <td><span class="badge badge-active">Logged in</span></td>
+          <td class="muted small">{{ person.last_active|date:"d M Y, H:i" }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="empty">No one is currently logged in.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

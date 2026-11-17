@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% block title %}Timesheet · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="ts-hero ts-hero-slim ts-hero-week">
+  <div>
+    <h1>{{ target.display_name }}</h1>
+    <p class="muted">Week of {{ monday|date:"j M Y" }}
+      {% if grid.week_status == "submitted" %}<span class="badge badge-active">Submitted</span>
+      {% elif grid.week_status == "partial" %}<span class="badge badge-proposal">Partly submitted</span>
+      {% elif grid.week_status == "locked" %}<span class="badge">🔒 Locked</span>{% endif %}
+    </p>
+  </div>
+  <div class="ts-weeknav">
+    <form class="ts-daynav" method="get">
+      {% if target.pk != user.pk %}<input type="hidden" name="user" value="{{ target.pk }}">{% endif %}
+      <a class="ts-nav-btn" href="?week={{ prev|date:'Y-m-d' }}{% if target.pk != user.pk %}&user={{ target.pk }}{% endif %}" aria-label="Previous week">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+      <label class="ts-daychip ts-rangechip" title="Jump to a week">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span><strong>{{ monday|date:"d M" }} - {{ grid.days.6.date|date:"d M Y" }}</strong></span>
+        <input type="date" name="week" value="{{ monday|date:'Y-m-d' }}" onchange="this.form.submit()" onclick="this.showPicker&&this.showPicker()" aria-label="Pick any day of the week">
+      </label>
+      <a class="ts-nav-btn" href="?week={{ next|date:'Y-m-d' }}{% if target.pk != user.pk %}&user={{ target.pk }}{% endif %}" aria-label="Next week">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></a>
+    </form>
+    <a class="ts-thisweek{% if monday == this_week %} on{% endif %}" href="?week={{ this_week|date:'Y-m-d' }}{% if target.pk != user.pk %}&user={{ target.pk }}{% endif %}">This week</a>
+    {% include "timesheet/_person_picker.html" %}
+  </div>
+</div>
+{% include "timesheet/_tabs.html" %}
+
+{% if admin_cards %}
+<div class="ts-kpis ts-admin-kpis">
+  <a class="ts-kpi ts-kpi-colored k-green is-link" href="{% url 'timesheet:people_today' 'present' %}">
+    <span class="ts-kpi-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 11l2 2 4-4"/></svg></span>
+    <div><strong>{{ admin_cards.today.present }}<small> / {{ admin_cards.today.total }}</small></strong><span>Present today</span></div>
+    <em>View names ›</em>
+  </a>
+  <a class="ts-kpi ts-kpi-colored k-red is-link" href="{% url 'timesheet:people_today' 'absent' %}">
+    <span class="ts-kpi-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M17 9l4 4M21 9l-4 4"/></svg></span>
+    <div><strong>{{ admin_cards.today.absent }}<small> / {{ admin_cards.today.total }}</small></strong>
+      <span>Not logged in{% if admin_cards.today.kind != "workday" %} · not checked (holiday / weekend){% endif %}</span></div>
+    <em>View names ›</em>
+  </a>
+  <a class="ts-kpi ts-kpi-colored k-amber is-link" href="{% url 'timesheet:people_today' 'leave' %}">
+    <span class="ts-kpi-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><rect x="15" y="9" width="7" height="6" rx="1.2"/><path d="M17 9V8a1.5 1.5 0 0 1 3 0v1"/></svg></span>
+    <div><strong>{{ admin_cards.today.leave }}<small> / {{ admin_cards.today.total }}</small></strong><span>On leave today</span></div>
+    <em>View names ›</em>
+  </a>
+  <a class="ts-kpi ts-kpi-colored k-blue is-link" href="{% url 'timesheet:people' %}?week={{ monday|date:'Y-m-d' }}&status=pending">
+    <span class="ts-kpi-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg></span>
+    <div><strong>{{ admin_cards.fully }}<small> / {{ admin_cards.people }}</small></strong><span>Fully submitted this week</span></div>
+    <em>Who's pending ›</em>
+  </a>
+</div>
+{% endif %}
+
+{% if grid.no_projects %}
+  <div class="alert alert-warning">No active projects are assigned for this week, so no hours were filled.
+    Ask your manager to add you to a project (Project → People). Completed projects are never filled.</div>
+{% endif %}
+
+{% if grid.too_many %}
+  <div class="alert alert-warning">{% if target.pk == user.pk %}You have{% else %}{{ target.display_name }} has{% endif %} {{ grid.open_count }} open projects, more than the {{ grid.main_max }} daily hours can be split across, so all 8 hours go to one project.
+    Click the ☆ next to up to {{ grid.main_max }} main projects and the hours will be split across those.</div>
+{% endif %}
+{% if can_star and grid.open_count > 1 %}
+  <p class="ts-mainbar"><span class="ts-star-ico" aria-hidden="true">★</span> Main projects: <strong>{{ grid.main_count }} / {{ grid.main_max }}</strong>
+    <span class="muted">{% if grid.main_count %}— the 8 daily hours are split across the starred projects; the others start at 0 (type hours if work was done on them).
+    {% else %}— optional: star the projects mainly worked on and the 8 daily hours will be split across those only.{% endif %}</span></p>
+  <form method="post" action="{% url 'timesheet:main_project' target.pk %}" id="ts-star">
+    {% csrf_token %}<input type="hidden" name="week" value="{{ monday|date:'Y-m-d' }}">
+  </form>
+{% endif %}
+
+<form method="post" class="card ts-sheet-card" id="ts-form">
+  {% csrf_token %}
+  <input type="hidden" name="week" value="{{ monday|date:'Y-m-d' }}">
+  <input type="hidden" name="user" value="{{ target.pk }}">
+  <input type="hidden" name="loaded_at" value="{{ loaded_at }}">
+  {% if grid.leave_editable %}
+    <div class="ts-leave-add is-top"{% if grid.leave_total %} hidden{% endif %}><button class="ts-leave-btn" type="button" id="ts-add-leave"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.5v4M10 15.5h4"/></svg>Add leave</button>
+      <span class="ts-info">
+        <button class="ts-info-btn" type="button" aria-label="About adding leave" aria-describedby="ts-leave-tip" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></button>
+        <span class="ts-info-tip" id="ts-leave-tip" role="tooltip">Adds a Leave row: type 8 for a full day or 4 for a half day. Leave counts toward the 8-hour day.</span>
+      </span></div>
+  {% endif %}
+  <div class="ts-scroll">
+  <table class="ts-sheet">
+    <thead>
+      <tr>
+        <th class="ts-c-proj">Project</th>
+        {% for d in grid.days %}
+          <th class="ts-{{ d.kind }}{% if d.is_today %} is-today{% endif %}">
+            <span class="ts-h-dow">{{ d.date|date:"D" }}</span>
+            <span class="ts-h-date">{{ d.date|date:"d M" }}</span>
+            {% if d.kind == "weekend" %}<span class="ts-pill">Weekend</span>
+            {% elif d.kind == "holiday" %}<span class="ts-pill ts-pill-hol" title="{{ d.holiday.name }}">{{ d.holiday.name|truncatechars:11 }}</span>
+            {% elif d.leave >= 8 %}<span class="ts-pill ts-pill-leave">Leave</span>{% endif %}
+            {% if d.working_day and d.kind == "workday" %}<span class="ts-pill" title="{{ d.working_day.name }}">Working day</span>{% endif %}
+            {% if d.attendance == "present" %}<span class="ts-att ok" title="{% if d.att.first_login %}First login {{ d.att.first_login|time:'H:i' }}{% endif %}{% if d.att.last_logout %} · last logout {{ d.att.last_logout|time:'H:i' }}{% endif %}{% if d.att.overridden %} · override{% endif %}">● {% if d.att.first_login %}{{ d.att.first_login|time:"H:i" }}{% else %}Present{% endif %}</span>
+            {% elif d.attendance == "absent" %}<span class="ts-att bad" title="{% if d.att.overridden %}Override: {{ d.att.override_reason }}{% else %}No login that day{% endif %}">● Absent</span>{% endif %}
+            {% if d.locked %}<span class="ts-att" title="Month closed">🔒</span>{% endif %}
+          </th>
+        {% endfor %}
+        <th class="ts-c-total">Total</th>
+        <th class="ts-c-act"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in grid.rows %}
+        <tr>
+          <td class="ts-c-proj">
+            <div class="ts-proj">
+              <span class="ts-tile" style="--c:{{ row.project.color }}">{{ row.project.key|slice:":2"|upper }}</span>
+              <span class="ts-proj-name">
+                <a href="{{ row.project.get_absolute_url }}">{{ row.project.key }}</a>
+                <small title="{{ row.project.name }}">{{ row.project.name }}</small>
+              </span>
+              {% if row.completed %}<span class="badge badge-completed">Completed</span>{% endif %}
+              {% if can_star and row.can_star and grid.open_count > 1 %}
+                {% if row.main %}
+                  <button class="ts-star on" type="submit" form="ts-star" name="star" value="unpin:{{ row.project.pk }}"
+                          title="Main project — click to remove the star" aria-label="Remove {{ row.project.key }} from main projects">★</button>
+                {% elif grid.main_count >= grid.main_max %}
+                  <button class="ts-star" type="button" disabled title="Already {{ grid.main_max }} main projects — remove a star first" aria-label="Main projects full">☆</button>
+                {% else %}
+                  <button class="ts-star" type="submit" form="ts-star" name="star" value="pin:{{ row.project.pk }}"
+                          title="Mark as a main project" aria-label="Mark {{ row.project.key }} as a main project">☆</button>
+                {% endif %}
+              {% endif %}
+            </div>
+          </td>
+          {% for c in row.cells %}
+            <td class="ts-{{ c.kind }}{% if c.date == grid.today %} is-today{% endif %}">
+              {% if c.input %}
+                <input class="ts-box{% if c.reduce_only %} is-reduce{% endif %}" type="number" min="0" max="{% if c.reduce_only %}{{ c.hours }}{% else %}8{% endif %}" step="1" inputmode="numeric"
+                       {% if c.reduce_only %}title="{% if c.no_login %}No login this day (Absent): you can lower or clear these hours, not add more{% else %}No longer assigned to this project: you can lower or clear these hours, not add more{% endif %}"{% endif %}
+                       name="h_{{ c.date|date:'Y-m-d' }}_{{ row.project.pk }}" value="{{ c.hours }}"
+                       data-day="{{ c.date|date:'Y-m-d' }}" aria-label="{{ row.project.key }} {{ c.date|date:'D d M' }}">
+              {% else %}
+                <span class="ts-box is-ro" data-day="{{ c.date|date:'Y-m-d' }}" data-hours="{{ c.hours }}"
+                      title="{% if c.no_login %}No login this day (Absent): hours stay 0{% elif not c.allowed %}Not open for hours on this day{% else %}Locked{% endif %}">{% if c.has or c.allowed %}{{ c.hours }}{% else %}–{% endif %}</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+          <td class="ts-c-total"><strong><span data-row-total>{{ row.total }}</span>h</strong></td>
+          <td class="ts-c-act">
+            {% if can_edit_any %}<button class="ts-trash" type="button" data-clear-row title="Reset this row to 0 (not saved until you click Save draft or Submit week)" aria-label="Reset {{ row.project.key }} hours to 0">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="10" class="empty">No projects to log hours against this week.</td></tr>
+      {% endfor %}
+      <tr class="ts-leave-row" id="ts-leave-row"{% if not grid.leave_total %} hidden{% endif %}>
+        <td class="ts-c-proj">
+          <div class="ts-proj">
+            <span class="ts-tile ts-tile-leave">LV</span>
+            <span class="ts-proj-name"><strong>Leave</strong><small>8 = full day · 4 = half day</small></span>
+          </div>
+        </td>
+        {% for d in grid.days %}
+          <td class="ts-{{ d.kind }}{% if d.is_today %} is-today{% endif %}">
+            {% if d.leave_input %}
+              <input class="ts-box ts-box-leave" type="number" min="0" max="8" step="1" inputmode="numeric"
+                     name="l_{{ d.date|date:'Y-m-d' }}" value="{{ d.leave }}" data-day="{{ d.date|date:'Y-m-d' }}" data-leave
+                     {% if d.splits %}data-splits="{{ d.splits }}"{% endif %} aria-label="Leave {{ d.date|date:'D d M' }}">
+            {% else %}
+              <span class="ts-box is-ro" data-day="{{ d.date|date:'Y-m-d' }}" data-hours="{{ d.leave }}"
+                    title="{% if d.kind != 'workday' %}Off day — no leave needed{% else %}Locked{% endif %}">{% if d.leave %}{{ d.leave }}{% else %}–{% endif %}</span>
+            {% endif %}
+          </td>
+        {% endfor %}
+        <td class="ts-c-total"><strong><span data-row-total>{{ grid.leave_total }}</span>h</strong></td>
+        <td class="ts-c-act">
+          {% if grid.leave_editable %}<button class="ts-trash" type="button" id="ts-remove-leave" title="Remove the Leave row — clears this week's leave (not saved until you click Save draft or Submit week)" aria-label="Remove the Leave row">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v5M14 11v5"/></svg></button>{% endif %}
+        </td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="ts-c-proj"><strong>Day total</strong></td>
+        {% for d in grid.days %}
+          <td class="ts-{{ d.kind }}{% if d.is_today %} is-today{% endif %}">
+            <strong class="ts-dt"><span data-total="{{ d.date|date:'Y-m-d' }}">{{ d.total }}</span>h</strong>
+            {% if d.status == "submitted" %}<svg class="ts-ok ts-ok-sm" viewBox="0 0 24 24" width="13" height="13" aria-label="Submitted"><title>Submitted</title><circle cx="12" cy="12" r="11" fill="var(--success)"/><path d="M7 12.5l3.2 3L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>{% endif %}
+          </td>
+        {% endfor %}
+        <td class="ts-c-total"><strong class="ts-wt"><span id="ts-week-total">{{ grid.week_total }}</span>h</strong></td>
+        <td class="ts-c-act"></td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+  {% if can_edit_any and grid.rows or can_edit_any and grid.leave_editable %}
+    <div class="ts-foot">
+      <button class="btn ts-btn" type="submit" name="action" value="draft">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save draft</button>
+      <button class="btn btn-primary ts-btn" type="submit" name="action" value="submit">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>{% if grid.submitted_days %}Update week{% else %}Submit week{% endif %}</button>
+      <span class="ts-info ts-info-up">
+        <button class="ts-info-btn" type="button" aria-label="Editing deadline" aria-describedby="ts-rules-tip" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></button>
+        <span class="ts-info-tip ts-tip-one" id="ts-rules-tip" role="tooltip">{% if edit_locked %}{{ edit_until|date:"F Y" }} is locked.{% else %}You can edit until <strong>{{ edit_until|date:"j M Y" }}</strong>{% endif %}</span>
+      </span>
+      <span class="ts-unsaved" id="ts-unsaved" hidden>● Unsaved changes</span>
+      <span class="ts-overwarn" id="ts-overwarn" role="alert" hidden></span>
+    </div>
+  {% elif grid.week_status == "locked" and grid.rows %}
+    <div class="ts-foot">
+      <button class="btn ts-btn" type="button" disabled aria-disabled="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save draft</button>
+      <button class="btn btn-primary ts-btn" type="button" disabled aria-disabled="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>{% if grid.submitted_days %}Update week{% else %}Submit week{% endif %}</button>
+    </div>
+  {% endif %}
+</form>
+
+<script>
+(function () {
+  var form = document.getElementById("ts-form");
+  if (!form) return;
+  var unsaved = document.getElementById("ts-unsaved"), dirty = false, MAX = 8;
+  function val(el) {
+    var v = el.tagName === "INPUT" ? parseInt(el.value || "0", 10) : parseInt(el.dataset.hours || "0", 10);
+    return isNaN(v) || v < 0 ? 0 : v;
+  }
+  function recalc() {
+    var totals = {}, week = 0;
+    form.querySelectorAll("tbody tr").forEach(function (tr) {
+      var rowTotal = 0;
+      tr.querySelectorAll("[data-day]").forEach(function (el) {
+        var v = val(el);
+        rowTotal += v;
+        totals[el.dataset.day] = (totals[el.dataset.day] || 0) + v;
+      });
+      var rt = tr.querySelector("[data-row-total]"); if (rt) rt.textContent = rowTotal;
+    });
+    Object.keys(totals).forEach(function (day) {
+      var cell = form.querySelector('[data-total="' + day + '"]');
+      if (cell) { cell.textContent = totals[day]; cell.parentNode.classList.toggle("ts-over", totals[day] > MAX); }
+      week += totals[day];
+    });
+    var over = Object.keys(totals).filter(function (d) { return totals[d] > MAX; });
+    form.querySelectorAll("button[type=submit]").forEach(function (b) { b.disabled = over.length > 0; });
+    var warn = document.getElementById("ts-overwarn");
+    if (warn) {
+      warn.hidden = !over.length;
+      warn.textContent = over.length ? "⚠ " + over.map(function (d) {
+        return new Date(d + "T00:00").toLocaleDateString(undefined, { weekday: "short", day: "2-digit", month: "short" }) + " has " + totals[d] + "h";
+      }).join(", ") + " — a day can have at most " + MAX + " hours in total." : "";
+    }
+    var w = document.getElementById("ts-week-total"); if (w) w.textContent = week;
+  }
+  function markDirty() { if (!dirty && unsaved) { dirty = true; unsaved.hidden = false; } }
+  form.addEventListener("input", function () { recalc(); markDirty(); });
+  form.querySelectorAll("[data-clear-row]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var changed = false;
+      btn.closest("tr").querySelectorAll("input.ts-box").forEach(function (el) { if (el.value !== "0") { el.value = "0"; changed = true; } });
+      if (changed) { recalc(); markDirty(); }
+    });
+  });
+  form.addEventListener("submit", function () { dirty = false; });
+  window.addEventListener("beforeunload", function (e) { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+  form.querySelectorAll("input.ts-box").forEach(function (el) { el.addEventListener("focus", function () { el.select(); }); });
+  // Leave: on a day nobody has edited, the project hours re-split around the leave (the server does the same)
+  var touched = {};
+  form.querySelectorAll("input.ts-box:not([data-leave])").forEach(function (el) {
+    el.addEventListener("input", function () { touched[el.dataset.day] = true; });
+  });
+  form.querySelectorAll("input[data-leave]").forEach(function (el) {
+    el.addEventListener("input", function () {
+      var raw = el.getAttribute("data-splits"), day = el.dataset.day;
+      if (!raw || touched[day]) return;
+      var leave = Math.min(Math.max(parseInt(el.value || "0", 10) || 0, 0), MAX);
+      var split = JSON.parse(raw)[String(leave)] || {};
+      form.querySelectorAll('input.ts-box[name^="h_' + day + '_"]').forEach(function (box) {
+        box.value = split[box.name.split("_")[2]] || 0;
+      });
+      recalc();
+    });
+  });
+  var addLeave = document.getElementById("ts-add-leave");
+  if (addLeave) addLeave.addEventListener("click", function () {
+    var row = document.getElementById("ts-leave-row");
+    row.hidden = false;
+    addLeave.parentNode.hidden = true;
+    var first = row.querySelector("input[data-leave]");
+    if (first) first.focus();
+  });
+  var removeLeave = document.getElementById("ts-remove-leave");
+  if (removeLeave) removeLeave.addEventListener("click", function () {
+    var row = document.getElementById("ts-leave-row");
+    // zero every editable leave box through a real input event, so the project hours re-split around
+    // it exactly as if the person had typed 0 — saved only when they click Save draft / Submit week
+    row.querySelectorAll("input[data-leave]").forEach(function (el) {
+      if (el.value !== "" && el.value !== "0") { el.value = "0"; el.dispatchEvent(new Event("input", { bubbles: true })); }
+    });
+    // leave on days that can't be edited (locked) can't be removed here, so keep the row for those
+    var stuck = Array.prototype.some.call(row.querySelectorAll(".is-ro"), function (el) { return val(el) > 0; });
+    if (!stuck) {
+      row.hidden = true;
+      var bar = document.getElementById("ts-add-leave");
+      if (bar) bar.parentNode.hidden = false;
+    }
+  });
+  recalc();  // also flags a day that is already over 8 when the page opens
+})();
+</script>
+<script>
+// Starring a project saves and reloads the page (the server re-splits the hours). Remember where the
+// person was scrolled to and put them back there, so the page doesn't jump to the top.
+(function () {
+  var KEY = "ts-star-scroll";
+  var form = document.getElementById("ts-star");
+  if (form) form.addEventListener("submit", function () {
+    try { sessionStorage.setItem(KEY, JSON.stringify({ y: window.scrollY, t: Date.now() })); } catch (e) {}
+  });
+  var saved = null;
+  try {
+    saved = JSON.parse(sessionStorage.getItem(KEY) || "null");
+    sessionStorage.removeItem(KEY);
+  } catch (e) {}
+  if (saved && Date.now() - saved.t < 15000) {
+    window.scrollTo(0, saved.y);
+    window.addEventListener("load", function () { window.scrollTo(0, saved.y); });
+  }
+})();
+</script>
+<script>
+// The "i" next to Add leave: hover or keyboard focus shows the tip via CSS; this adds tap/click to open and Esc / outside click to close.
+(function () {
+  var info = document.querySelector(".ts-info");
+  if (!info) return;
+  var btn = info.querySelector(".ts-info-btn");
+  function set(open) { info.classList.toggle("is-open", open); btn.setAttribute("aria-expanded", open ? "true" : "false"); }
+  btn.addEventListener("click", function (e) { e.stopPropagation(); set(!info.classList.contains("is-open")); });
+  document.addEventListener("click", function () { set(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") set(false); });
+})();
+</script>
+<script>
+(function () {
+  document.querySelectorAll(".ts-info-up").forEach(function (info) {
+    var btn = info.querySelector(".ts-info-btn");
+    function set(open) { info.classList.toggle("is-open", open); btn.setAttribute("aria-expanded", open ? "true" : "false"); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); set(!info.classList.contains("is-open")); });
+    document.addEventListener("click", function () { set(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") set(false); });
+  });
+})();
+</script>
+{% endblock %}

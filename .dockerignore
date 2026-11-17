@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.git/
+.claude/
+staticfiles/
+*.sqlite3
+.venv/

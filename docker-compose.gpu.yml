@@ -1,0 +1,42 @@
+# Optional GPU overlay for the local audio models (diarizer in `asr`, hush in `denoise`).
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.gpu.yml up -d
+#
+# `deploy/deploy.sh` layers this file automatically when it can start a `--gpus all`
+# container, and skips it otherwise (GPU=1 forces it, GPU=0 disables it).
+#
+# It is safe to leave off: without it both services still run, picking CPU at runtime.
+# It is NOT safe to force on a host whose NVIDIA Container Toolkit is missing or broken —
+# the reservation is a hard requirement and `up` then fails at container init. That is
+# what `deploy.sh`'s probe guards against.
+#
+# Both services also honour the device hint themselves (DIAR_DEVICE / DENOISE_DEVICE =
+# auto|cuda|cpu). `auto` uses CUDA when torch sees a GPU and falls back to CPU on any
+# error, so a half-working GPU degrades instead of erroring.
+
+services:
+  asr:
+    environment:
+      DIAR_DEVICE: ${DIAR_DEVICE:-auto}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  denoise:
+    environment:
+      DENOISE_DEVICE: ${DENOISE_DEVICE:-auto}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

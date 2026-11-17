@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load perms %}
+{% block title %}Requirements · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'projects:list' %}">Projects</a> / <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Requirements</p>
+    <h1>Requirements · {{ project.name }}</h1>
+  </div>
+  <div class="row-actions">
+    {% if can_manage %}<a class="btn btn-primary" href="{% url 'sprints:requirement_create_for_project' project.pk %}">+ New requirement</a>{% endif %}
+  </div>
+</div>
+
+{% include "_project_tabs.html" %}
+
+<form class="filters card" method="get">
+  <select name="status">
+    <option value="open" {% if f_status == 'open' %}selected{% endif %}>Open</option>
+    <option value="all" {% if f_status == 'all' %}selected{% endif %}>Any status</option>
+    {% for value, label in status_choices %}<option value="{{ value }}" {% if f_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+{% for group in grouped %}
+  <div class="card table-wrap">
+    <header class="card-head"><h2><a href="{{ group.sprint.get_absolute_url }}">{{ group.sprint.key }} · {{ group.sprint.name }}</a> <span class="pill sp-status-{{ group.sprint.status }}">{{ group.sprint.get_status_display }}</span></h2></header>
+    {% include "sprints/_requirement_rows.html" with rows=group.rows %}
+  </div>
+{% endfor %}
+
+<div class="card table-wrap">
+  <header class="card-head"><h2>Backlog · {{ backlog|length }}</h2></header>
+  {% include "sprints/_requirement_rows.html" with rows=backlog %}
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Authenticator code · {{ APP_NAME }}{% endblock %}
+{% block auth %}
+<div class="login-hero" style="background-image:url('{% static 'img/Login.png' %}')">
+  <div class="login-hero-inner">
+    <div class="login-hero-content">
+      <div class="login-visual-brand"><span class="brand-mark">P</span> {{ APP_NAME }}</div>
+      <h1 class="login-hero-title">Work Smarter<br>with <span class="grad-text">{{ APP_NAME }}</span></h1>
+      <p class="login-hero-sub">A simpler way to stay organized<br>and get things done.</p>
+      <span class="login-hero-accent" aria-hidden="true"></span>
+    </div>
+
+    <div class="login-card-float">
+      {% if broken %}
+        <div class="login-form-brand"><span class="brand-mark-lg">P</span><h1>Authenticator problem</h1>
+          <p class="muted small">Your saved authenticator could not be read. Please ask an administrator to reset it, then sign in again.</p></div>
+        <p class="auth-alt"><a href="{% url 'accounts:login' %}">Back to sign in</a></p>
+      {% elif setup %}
+        <div class="login-form-brand"><span class="brand-mark-lg">P</span><h1>Set up your authenticator</h1>
+          <p class="muted small">Your account needs an authenticator app. This is a one-time step.</p></div>
+        <ol class="small" style="margin:0 0 10px;padding-left:18px;line-height:1.5">
+          <li>Install <strong>Microsoft Authenticator</strong> (free) on your phone.</li>
+          <li>In the app choose <strong>Add account</strong>, then <strong>Other account</strong>, and scan this code.</li>
+          <li>Type the 6-digit code the app shows.</li>
+        </ol>
+        <div id="mfa-qr" data-uri="{{ uri }}" style="display:flex;justify-content:center;margin:6px 0 8px"></div>
+        <p class="muted small" style="text-align:center;margin:0 0 10px">
+          <button type="button" id="mfa-show-key" class="btn btn-ghost btn-sm" aria-expanded="false" aria-controls="mfa-key-box">Can't scan?</button>
+        </p>
+        <div id="mfa-key-box" hidden class="muted small" style="text-align:center;margin:0 0 10px">
+          Enter this key in the app instead:<br>
+          <code id="mfa-key" style="word-break:break-all;user-select:all"></code>
+        </div>
+        <noscript><p class="muted small">Please turn on JavaScript to see the QR code.</p></noscript>
+      {% else %}
+        <div class="login-form-brand"><span class="brand-mark-lg">P</span><h1>Enter your authenticator code</h1>
+          <p class="muted small">Open your authenticator app and type the 6-digit code for Planwise. No phone? Use one of your backup codes.</p></div>
+      {% endif %}
+
+      {% if not broken %}
+      <form method="post" class="login-form" autocomplete="off">
+        {% csrf_token %}
+        {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+        <label class="field"><span>{% if setup %}Code from the app{% else %}Code{% endif %}</span>
+          <input type="text" name="code" inputmode="{% if setup %}numeric{% else %}text{% endif %}" autocomplete="one-time-code"
+                 maxlength="9" placeholder="{% if setup %}123456{% else %}123456 or backup code{% endif %}" required autofocus
+                 style="letter-spacing:4px;font-size:20px;text-align:center">
+        </label>
+        <button class="btn btn-primary btn-block login-submit" type="submit">{% if setup %}Confirm and sign in{% else %}Verify and sign in{% endif %} <span aria-hidden="true">→</span></button>
+      </form>
+      <p class="auth-alt"><a href="{% url 'accounts:login' %}">Back to sign in</a></p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if setup %}
+<script src="{% static 'js/vendor/qrcode.js' %}"></script>
+<script>
+(function () {
+  var el = document.getElementById("mfa-qr");
+  if (!el || typeof qrcode !== "function") return;
+  var qr = qrcode(0, "M");
+  qr.addData(el.dataset.uri);
+  qr.make();
+  el.innerHTML = qr.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+  var svg = el.querySelector("svg");
+  if (svg) { svg.style.width = "190px"; svg.style.height = "190px"; svg.style.background = "#fff"; }
+  // The typed key is not in the page text: it is read from the QR link only when "Can't scan?" is clicked.
+  var btn = document.getElementById("mfa-show-key"), box = document.getElementById("mfa-key-box");
+  if (btn && box) btn.addEventListener("click", function () {
+    var open = box.hidden;
+    if (open) {
+      var secret = new URLSearchParams(el.dataset.uri.split("?")[1] || "").get("secret") || "";
+      document.getElementById("mfa-key").textContent = secret.replace(/(.{4})/g, "$1 ").trim();
+    } else {
+      document.getElementById("mfa-key").textContent = "";
+    }
+    box.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    btn.textContent = open ? "Hide the key" : "Can't scan?";
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}{% if project %}Edit {{ project.key }}{% else %}New project{% endif %} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{% if project %}Edit {{ project.key }}{% else %}New project{% endif %}</h1></div>
+<form id="project-form" class="card form-grid" method="post" enctype="multipart/form-data" onsubmit="this.querySelector('button[type=submit]').disabled=true">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+  {% for field in form %}{% if field.name != "po_number" and field.name != "po_document" %}
+    <label class="field {% if field.name in 'description' %}span-2{% endif %}">
+      <span>{{ field.label }}</span>{{ field }}
+      {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+      {% if field.errors %}<em class="err">{{ field.errors.0 }}</em>{% endif %}
+    </label>
+  {% endif %}{% endfor %}
+
+  <section class="po-panel span-2" id="po-summary" {% if form.status.value != "active" %}hidden{% endif %}>
+    <div class="po-panel-icon">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l2 2 4-4"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+    </div>
+    <div class="po-panel-body">
+      <strong>Purchase order</strong>
+      <div class="po-panel-meta">
+        <span id="po-summary-number" class="po-pill {% if not form.po_number.value %}is-empty{% endif %}">{% if form.po_number.value %}PO {{ form.po_number.value }}{% else %}No PO number{% endif %}</span>
+        <span id="po-summary-file">{% if project.po_document %}<a class="po-file-chip" href="{% url 'projects:po_download' project.pk %}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> {{ project.po_filename }}</a>{% else %}<span class="muted small">No document</span>{% endif %}</span>
+      </div>
+    </div>
+    <button class="btn btn-sm" type="button" data-po-open>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      Edit PO details
+    </button>
+  </section>
+
+  <dialog class="po-dialog" id="po-dialog" aria-labelledby="po-dialog-title">
+    <header class="po-dialog-head">
+      <div class="po-panel-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l2 2 4-4"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      </div>
+      <div>
+        <h3 id="po-dialog-title">Purchase order details</h3>
+        <p class="muted small">Project is going Active. Both fields are optional; you can add or change them later.</p>
+      </div>
+      <button class="po-x" type="button" data-po-skip aria-label="Close">&times;</button>
+    </header>
+
+    <label class="field">
+      <span>PO number</span>
+      <input type="text" name="{{ form.po_number.html_name }}" id="{{ form.po_number.id_for_label }}" maxlength="100"
+             value="{{ form.po_number.value|default:'' }}" placeholder="e.g. PO-2026-0142" autocomplete="off">
+      {% if form.po_number.errors %}<em class="err">{{ form.po_number.errors.0 }}</em>{% endif %}
+    </label>
+
+    <div class="field">
+      <span>PO document</span>
+      {% if project.po_document %}
+        <div class="po-current" id="po-current">
+          <a class="po-file-chip" href="{% url 'projects:po_download' project.pk %}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> {{ project.po_filename }}</a>
+          <label class="po-remove"><input type="checkbox" name="{{ form.po_document.html_name }}-clear" id="po-clear"> Remove</label>
+        </div>
+      {% endif %}
+      <label class="po-drop" id="po-drop">
+        <input type="file" name="{{ form.po_document.html_name }}" id="{{ form.po_document.id_for_label }}"
+               accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+        <span id="po-drop-text"><strong>{% if project.po_document %}Replace file{% else %}Click to upload{% endif %}</strong> or drag it here</span>
+        <small class="muted">PDF, image, Word or Excel</small>
+      </label>
+      {% if form.po_document.errors %}<em class="err">{{ form.po_document.errors.0 }}</em>{% endif %}
+    </div>
+
+    <footer class="po-dialog-foot">
+      <button class="btn btn-ghost" type="button" data-po-skip>Skip for now</button>
+      <button class="btn btn-primary" type="button" data-po-close>Done</button>
+    </footer>
+  </dialog>
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-ghost" href="{% if project %}{{ project.get_absolute_url }}{% else %}{% url 'projects:list' %}{% endif %}">Cancel</a>
+  </div>
+</form>
+
+{% if project %}
+  {% include "vms/_project_vms.html" with can_edit=True %}
+{% else %}
+  <p class="muted small">Save the project first, then come back here to assign VMs to it.</p>
+{% endif %}
+<script>
+(function () {
+  var status = document.getElementById("id_status");
+  var dialog = document.getElementById("po-dialog");
+  var panel = document.getElementById("po-summary");
+  if (!status || !dialog || !dialog.showModal) return;
+  var number = document.getElementById("id_po_number");
+  var file = document.getElementById("id_po_document");
+  var clear = document.getElementById("po-clear");
+  var drop = document.getElementById("po-drop");
+  var dropText = document.getElementById("po-drop-text");
+  var sumNumber = document.getElementById("po-summary-number");
+  var sumFile = document.getElementById("po-summary-file");
+  var fileHtml = sumFile.innerHTML;
+  var dropHtml = dropText.innerHTML;
+
+  function sizeLabel(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; }
+  function picked() { return file.files && file.files.length ? file.files[0] : null; }
+
+  function refresh() {
+    panel.hidden = status.value !== "active";
+    var n = number.value.trim();
+    sumNumber.textContent = n ? "PO " + n : "No PO number";
+    sumNumber.classList.toggle("is-empty", !n);
+    var f = picked();
+    drop.classList.toggle("has-file", !!f);
+    if (f) {
+      dropText.innerHTML = "";
+      var b = document.createElement("strong"); b.textContent = f.name;
+      dropText.appendChild(b);
+      dropText.appendChild(document.createTextNode(" · " + sizeLabel(f.size) + " · will upload on Save"));
+      sumFile.textContent = f.name + " (on Save)";
+    } else {
+      dropText.innerHTML = dropHtml;
+      sumFile.innerHTML = clear && clear.checked ? '<span class="muted small">Document will be removed on Save</span>' : fileHtml;
+    }
+  }
+
+  status.addEventListener("change", function () {
+    refresh();
+    if (status.value === "active") { dialog.showModal(); number.focus(); }
+  });
+  document.querySelector("[data-po-open]").addEventListener("click", function () { dialog.showModal(); number.focus(); });
+  dialog.querySelectorAll("[data-po-close],[data-po-skip]").forEach(function (b) {
+    b.addEventListener("click", function () { dialog.close(); });
+  });
+  dialog.addEventListener("close", refresh);
+  dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });  // backdrop click
+  number.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); dialog.close(); } });
+  file.addEventListener("change", function () { if (picked() && clear) clear.checked = false; refresh(); });
+  if (clear) clear.addEventListener("change", refresh);
+
+  ["dragenter", "dragover"].forEach(function (t) {
+    drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add("is-drag"); });
+  });
+  ["dragleave", "drop"].forEach(function (t) {
+    drop.addEventListener(t, function () { drop.classList.remove("is-drag"); });
+  });
+  drop.addEventListener("drop", function (e) {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) { file.files = e.dataTransfer.files; file.dispatchEvent(new Event("change")); }
+  });
+
+  {% if form.po_number.errors or form.po_document.errors %}dialog.showModal();{% endif %}
+})();
+</script>
+{% if project %}
+<script>
+/* After a save the server sends you to the project page, so this edit page is still one step back in the
+   browser history. Going Back from the project page would land here again; skip over it instead, so Back
+   goes to wherever you opened the edit page from (normally the projects list). */
+(function () {
+  var key = "pw-saved-edit:" + location.pathname, form = document.getElementById("project-form");
+  function store(fn) { try { return fn(window.sessionStorage); } catch (e) { return null; } }  // storage can be blocked
+  form.addEventListener("submit", function (e) {
+    if (!e.defaultPrevented) store(function (s) { s.setItem(key, "1"); });
+  });
+  {% if form.errors %}store(function (s) { s.removeItem(key); });  // the save was refused: nothing was saved{% endif %}
+  window.addEventListener("pageshow", function (e) {
+    var nav = performance.getEntriesByType("navigation")[0];
+    var back = e.persisted || (nav && nav.type === "back_forward");
+    if (back && store(function (s) { return s.getItem(key); })) {
+      store(function (s) { s.removeItem(key); });
+      e.stopImmediatePropagation();  // keeps the "reload a page restored from memory" handler in app.js out of it
+      if (history.length > 1) history.back(); else location.replace("{% url 'projects:list' %}");
+    } else if (!back) {
+      store(function (s) { s.removeItem(key); });  // a fresh visit to the edit page starts clean
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

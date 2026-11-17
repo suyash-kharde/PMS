@@ -1,0 +1,26 @@
+<table class="table jobs-table">
+  <thead><tr><th>#</th><th>What</th><th>Project</th><th>Asked by</th><th>Status</th><th>When</th><th></th></tr></thead>
+  <tbody>
+    {% for r in rows %}
+      <tr{% if r.job.is_active %} data-job-url="{% url 'jobs:api_job' r.job.pk %}"{% endif %}>
+        <td class="muted">{{ r.job.pk }}</td>
+        <td>{% if r.job.result_url %}<a href="{{ r.job.result_url }}">{{ r.job.label }}</a>{% else %}{{ r.job.label }}{% endif %}
+          <small class="muted"> · {{ r.job.lane }}</small></td>
+        <td>{% if r.job.project %}<a href="{{ r.job.project.get_absolute_url }}">{{ r.job.project.key }}</a>{% else %}—{% endif %}</td>
+        <td>{{ r.job.requested_by.display_name|default:"System" }}</td>
+        <td><span class="badge job-st-{{ r.job.status }}">{{ r.job.get_status_display }}</span>
+          <small class="muted" data-job-text>{% if r.job.is_active %}{{ r.info.text }}{% elif r.job.status == "failed" %}{{ r.job.error|truncatechars:160 }}{% endif %}</small></td>
+        <td class="small muted">{% if r.job.finished_at %}{{ r.job.finished_at|timesince }} ago{% if r.job.duration %} · took {{ r.job.duration|floatformat:0 }} s{% endif %}{% elif r.job.started_at %}started {{ r.job.started_at|timesince }} ago{% else %}added {{ r.job.created_at|timesince }} ago{% endif %}</td>
+        <td class="row-actions">
+          {% if r.can_manage and r.job.status == "queued" %}
+            <form method="post" action="{% url 'jobs:cancel' r.job.pk %}" data-confirm="Remove “{{ r.job.label }}” from the queue?">{% csrf_token %}
+              <button class="btn btn-sm btn-ghost" type="submit">Cancel</button></form>
+          {% elif r.can_manage and r.job.status == "failed" or r.can_manage and r.job.status == "cancelled" %}
+            <form method="post" action="{% url 'jobs:retry' r.job.pk %}">{% csrf_token %}
+              <button class="btn btn-sm" type="submit">Retry</button></form>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="7" class="empty">{{ empty }}</td></tr>{% endfor %}
+  </tbody>
+</table>

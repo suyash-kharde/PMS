@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{% if service %}Edit service{% else %}New service{% endif %} · {{ project.key }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      <a href="{% url 'projects:list' %}">Projects</a> /
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> /
+      <a href="{% url 'sprints:service_list' project.pk %}">Services</a> /
+      {% if service %}Edit{% else %}New{% endif %}
+    </p>
+    <h1>{% if service %}Edit “{{ service.name }}”{% else %}New external / serviceable item{% endif %}</h1>
+    <p class="muted">Record the account, credentials or data this project needs from the client or a third party — never paste the secrets themselves.</p>
+  </div>
+</div>
+
+<form class="card form-grid" method="post">
+  {% csrf_token %}
+  {% include "sprints/_form_body.html" %}
+  <div class="form-actions span-2">
+    <button class="btn btn-primary" type="submit">{% if service %}Save{% else %}Add service{% endif %}</button>
+    <a class="btn btn-ghost" href="{% url 'sprints:service_list' project.pk %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

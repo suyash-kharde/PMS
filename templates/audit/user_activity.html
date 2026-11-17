@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Activity · {{ person.display_name }} · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{% url 'accounts:user_list' %}">People</a> / <a href="{% url 'accounts:user_detail' person.pk %}">{{ person.display_name }}</a> / Activity</p>
+    <h1>{{ person.display_name }} · Activity log</h1>
+  </div>
+</div>
+
+<form class="filters card" method="get">
+  <select name="range">
+    <option value="today" {% if preset == "today" %}selected{% endif %}>Today</option>
+    <option value="yesterday" {% if preset == "yesterday" %}selected{% endif %}>Yesterday</option>
+    <option value="7d" {% if preset == "7d" %}selected{% endif %}>Last 7 days</option>
+    <option value="30d" {% if preset == "30d" %}selected{% endif %}>Last 30 days</option>
+    <option value="custom" {% if preset == "custom" %}selected{% endif %}>Custom range</option>
+  </select>
+  <input type="datetime-local" name="from" value="{{ from_value }}" placeholder="From">
+  <input type="datetime-local" name="to" value="{{ to_value }}" placeholder="To">
+  <select name="action"><option value="">Any action</option>
+    {% for value, label in action_choices %}<option value="{{ value }}" {% if action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="module"><option value="">Any module</option>
+    {% for value, label in module_choices %}<option value="{{ value }}" {% if module == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="status"><option value="">Any status</option>
+    {% for value, label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+  <a class="btn btn-ghost" href="{% url 'audit:user_activity' person.pk %}">Reset</a>
+</form>
+
+<section class="card table-wrap">
+  <table class="table">
+    <thead><tr><th>When</th><th>What they did</th><th>Area</th><th>Status</th><th>Details</th></tr></thead>
+    <tbody>
+      {% for entry in page %}
+        <tr>
+          <td>{{ entry.created_at|date:"d M Y, H:i:s" }}</td>
+          <td><strong>{{ entry.summary }}</strong></td>
+          <td>{{ entry.get_module_display }}</td>
+          <td><span class="badge {% if entry.status == 'failed' %}badge-cancelled{% else %}badge-active{% endif %}">{{ entry.get_status_display }}</span></td>
+          <td class="muted small" title="{{ entry.details }}">{{ entry.details|default:"—"|truncatechars:300 }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="empty">No activity in this range.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% if page.has_other_pages %}
+  <nav class="pager">
+    {% if page.has_previous %}<a class="btn btn-ghost" href="?{{ request.GET.urlencode }}&page={{ page.previous_page_number }}">← Prev</a>{% endif %}
+    <span class="muted small">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="btn btn-ghost" href="?{{ request.GET.urlencode }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
+  </nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{# Tab bar shared by every timesheet page. `tab` is set by each view. #}
+{% load perms %}
+<nav class="ts-tabs">
+  {% if user|can:"timesheet.tab.week" %}<a class="{% if tab == 'week' %}on{% endif %}" href="{% url 'timesheet:week' %}{% if target and target.pk != user.pk %}?user={{ target.pk }}{% endif %}">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Timesheet</a>{% endif %}
+  {% if ts_has_people and user|can:"timesheet.tab.people" %}<a class="{% if tab == 'people' %}on{% endif %}" href="{% url 'timesheet:people' %}">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg>People</a>{% endif %}
+  {% if user|can:"timesheet.tab.calendar" %}<a class="{% if tab == 'calendar' %}on{% endif %}" href="{% url 'timesheet:calendar' %}{% if target and target.pk != user.pk %}?user={{ target.pk }}{% endif %}">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 14v4M10 16h4"/></svg>Calendar</a>{% endif %}
+  {% if user|can:"timesheet.tab.holidays" %}<a class="{% if tab == 'holidays' %}on{% endif %}" href="{% url 'timesheet:holidays' %}">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M3 12h18M12 8v13"/><path d="M12 8c-1.5-3-5-4-5-1.5S12 8 12 8zM12 8c1.5-3 5-4 5-1.5S12 8 12 8z"/></svg>Holidays</a>{% endif %}
+  {% if ts_is_manager and user|can:"timesheet.tab.attendance" %}<a class="{% if tab == 'attendance' %}on{% endif %}" href="{% url 'timesheet:attendance' %}">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>Attendance</a>{% endif %}
+  {% if user|can:"timesheet.tab.reports" %}<a class="{% if tab == 'reports' %}on{% endif %}" href="{% url 'timesheet:reports' %}">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M12 20V5M19 20v-7"/></svg>Reports</a>{% endif %}
+</nav>

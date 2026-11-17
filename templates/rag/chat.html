@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Ask AI · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs">
+      {% if project.customer %}<a href="{{ project.customer.get_absolute_url }}">{{ project.customer.name }}</a> / {% endif %}
+      <a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / Ask AI</p>
+    <h1>Ask about {{ project.name }}</h1>
+    <p class="muted">Answers are grounded in this project's notes, uploads, BRD, tasks and people — nothing else.</p>
+  </div>
+  <div class="row-actions">
+    <button class="btn" id="reindexBtn" data-url="{% url 'rag:reindex' project.pk %}">↻ Refresh index</button>
+    <button class="btn btn-ghost" id="clearChatBtn" data-url="{% url 'rag:clear_chat' project.pk %}">🗑 Clear chat</button>
+  </div>
+</div>
+
+{% include "_project_tabs.html" %}
+
+<section class="card chat-card" id="chatCard" data-project="{{ project.pk }}"
+  data-user-color="{{ request.user.color }}" data-user-initials="{{ request.user.initials }}">
+  <div class="chat-toolbar">
+    <label class="chat-toggle" title="Semantic search over notes, uploads and the BRD">
+      <input type="checkbox" id="toggleRag" checked><span>RAG (documents)</span>
+    </label>
+    <label class="chat-toggle" title="Read-only SQL over tasks, people, customer and project data">
+      <input type="checkbox" id="toggleSql" checked><span>DB agent (structured data)</span>
+    </label>
+    <span class="chat-status" id="chatStatus"><i class="chat-dot"></i> Connecting…</span>
+  </div>
+
+  <div class="chat-log" id="chatLog">
+    {% for m in chat_messages %}
+      <div class="chat-msg chat-{{ m.role }}">
+        <span class="avatar avatar-xs chat-avatar" style="--c:{% if m.role == 'user' %}{{ request.user.color }}{% else %}#7c3aed{% endif %}">
+          {% if m.role == 'user' %}{{ request.user.initials }}{% else %}✦{% endif %}
+        </span>
+        <div class="chat-bubble-wrap">
+          <div class="chat-bubble" data-raw>{{ m.content }}</div>
+          {% if m.sources %}
+            <div class="chat-cites">
+              {% for s in m.sources %}<span class="chip chat-cite">{{ s.source_type }} · {{ s.label }}</span>{% endfor %}
+            </div>
+          {% endif %}
+          {% if m.sql_used %}<details class="chat-sql"><summary>SQL used</summary><pre>{{ m.sql_used }}</pre></details>{% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <p class="empty">Ask a question about this project — status, people, what was decided, anything in the BRD.</p>
+    {% endfor %}
+  </div>
+  <form class="chat-input" id="chatForm">
+    <input type="text" name="question" placeholder="e.g. Who's the client contact? What's still open?" autocomplete="off" required>
+    <button class="btn btn-primary" type="submit" disabled>Ask</button>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/vendor/marked.min.js' %}"></script>
+<script src="{% static 'js/vendor/purify.min.js' %}"></script>
+<script src="{% static 'js/rag_chat.js' %}"></script>
+{% endblock %}

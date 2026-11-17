@@ -1,0 +1,22 @@
+<tr>
+  <td class="tkt-key"><a href="{{ t.get_absolute_url }}" title="{{ t.project.name }}">{{ t.key }}</a>
+    <button type="button" class="info-btn" data-info="{{ t.project.name }}"
+            title="{{ t.project.name }}" aria-label="Project: {{ t.project.name }}" aria-expanded="false">i</button></td>
+  {% if not hide_type %}<td><span class="tkt-type tkt-type-{{ t.type }}">{{ t.get_type_display }}</span></td>{% endif %}
+  <td>
+    <a class="grow tkt-title {% if not t.is_open %}done{% endif %}" href="{{ t.get_absolute_url }}" title="{{ t.title }}">{{ t.title }}</a>
+    {% for l in t.labels.all %}<span class="chip" style="--c:{{ l.color }}">{{ l.name }}</span>{% endfor %}
+  </td>
+  <td><span class="tkt-status tkt-status-{{ t.status }}">{{ t.get_status_display }}</span>{% include "tickets/_solved_info.html" %}</td>
+  <td><span class="prio prio-{{ t.priority }}" title="{{ t.get_priority_display }}"></span> {{ t.get_priority_display }}</td>
+  <td>
+    {% if t.assignee %}<span class="avatar avatar-xs" style="--c:{{ t.assignee.color }}" title="{{ t.assignee.display_name }}">{{ t.assignee.initials }}</span> {{ t.assignee.display_name }}
+    {% else %}<span class="muted">Unassigned</span>{% endif %}
+  </td>
+  {% if not hide_project %}<td><a href="{{ t.project.get_absolute_url }}">{{ t.project.key }}</a></td>{% endif %}
+  <td>
+    {% if t.reporter %}<span class="avatar avatar-xs" style="--c:{{ t.reporter.color }}" title="{{ t.reporter.display_name }}">{{ t.reporter.initials }}</span> {{ t.reporter.display_name }}
+    {% else %}<span class="muted">—</span>{% endif %}
+  </td>
+  <td class="muted small">{{ t.created_at|date:"d M Y, H:i" }}</td>
+</tr>

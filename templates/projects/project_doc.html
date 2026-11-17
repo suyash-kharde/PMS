@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load jobs %}
+{% block title %}{{ kind_label }} · {{ project.key }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumbs"><a href="{{ project.get_absolute_url }}">{{ project.key }}</a> / {{ kind_label }}</p>
+    <h1>{{ kind_label }}{% if doc.is_frozen %} <span class="badge badge-completed">Frozen</span>{% endif %}</h1>
+    <p class="muted">
+      {% if doc.is_frozen %}Frozen {{ doc.frozen_at|date:"d M Y, H:i" }}{% if doc.frozen_by %} by {{ doc.frozen_by.display_name }}{% endif %}
+      {% elif doc %}Last updated {{ doc.updated_at|date:"d M Y, H:i" }}{% if doc.updated_by %} by {{ doc.updated_by.display_name }}{% endif %}
+      {% else %}Not written yet.{% endif %}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if kind == 'build_plan' and can_edit and not doc.is_frozen %}
+      <form method="post" action="{% url 'projects:doc_generate_plan' project.pk %}"
+            {% if doc.content %}data-confirm="Regenerate the Build Plan from the current frozen sources? Any hand edits made since the last generation will be lost."{% endif %}>
+        {% csrf_token %}
+        <button class="btn btn-primary" type="submit" {% if not plan_sources_ready %}disabled title="Freeze Tech Stack, Dev Instructions and the BRD first"{% endif %}>
+          {% if doc.content %}Regenerate{% else %}Generate{% endif %} from sources
+        </button>
+      </form>
+    {% endif %}
+    {% if can_edit and not doc.is_frozen %}
+      <a class="btn {% if kind == 'build_plan' %}btn-ghost{% else %}btn-primary{% endif %}" href="{% url 'projects:doc_edit' project.pk kind %}">{% if doc %}Edit{% else %}Write{% endif %}</a>
+    {% endif %}
+    {% if can_edit and doc %}
+      <form method="post" action="{% url 'projects:doc_freeze' project.pk kind %}"
+            {% if not doc.is_frozen %}data-confirm="Freeze {{ kind_label }} as final? It won't be editable until unfrozen."{% endif %}>
+        {% csrf_token %}
+        <button class="btn {% if doc.is_frozen %}btn-primary{% else %}btn-ghost{% endif %}" type="submit">
+          {% if doc.is_frozen %}Unfreeze to edit{% else %}Freeze as final{% endif %}
+        </button>
+      </form>
+    {% endif %}
+    {% if doc %}<a class="btn btn-ghost" href="{% url 'projects:doc_download' project.pk kind %}">Download .md</a>{% endif %}
+  </div>
+</div>
+{% if kind == "build_plan" %}{% job_banners project=project kinds="build_plan" %}{% endif %}
+
+{% include "_project_tabs.html" %}
+
+{% if kind == 'build_plan' %}
+  <section class="card">
+    <header class="card-head"><h2>Sources</h2></header>
+    <p class="muted small">
+      The Build Plan is assembled from these three documents. Each must be frozen as final before
+      it can be generated, so the plan only ever reflects locked-in decisions.
+    </p>
+    <ul class="list">
+      {% for s in plan_sources %}
+        <li class="list-row">
+          <span class="grow">{{ s.label }}</span>
+          {% if s.ready %}
+            <span class="badge badge-active">Frozen</span>
+          {% elif s.doc %}
+            <span class="badge badge-on_hold">Not frozen yet</span>
+          {% else %}
+            <span class="badge">Not written yet</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+<section class="card">
+  {% if doc and doc.content %}
+    <article class="prose markdown">{{ html|safe }}</article>
+  {% elif kind == 'build_plan' %}
+    <p class="empty">
+      {% if plan_sources_ready %}
+        All sources are frozen — click <strong>Generate from sources</strong> above to build the plan.
+      {% else %}
+        Not generated yet. Freeze Tech Stack, Development Instructions and the BRD first, then generate it here.
+      {% endif %}
+    </p>
+  {% else %}
+    <p class="empty">
+      No {{ kind_label|lower }} written for this project yet.
+      {% if can_edit and not doc.is_frozen %}<a class="link" href="{% url 'projects:doc_edit' project.pk kind %}">Write it now</a>.{% endif %}
+    </p>
+  {% endif %}
+</section>
+{% endblock %}

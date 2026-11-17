@@ -1,0 +1,26 @@
+<fieldset class="span-2 pl-gw">
+  <label class="pl-gw-toggle"><input type="checkbox" name="{{ f.via_gateway.html_name }}" {% if f.via_gateway.value %}checked{% endif %} data-gw-toggle>
+    <strong>{{ f.via_gateway.label }}</strong></label>
+  <p class="muted small">People open it at <code>{{ request.get_host }}/sites/<em>address</em>/</code> — no VPN needed. Only signed-in users who can see {{ project.key }} get through.{% if not sites_enabled %} <strong>The site gateway isn't set up on this server yet;</strong> the setting is saved and goes live once it is.{% endif %}</p>
+  <div class="pl-gw-body" data-gw-body {% if not f.via_gateway.value %}hidden{% endif %}>
+    <label class="field"><span>{{ f.site_name.label }} <small class="muted">/sites/…/</small></span>{{ f.site_name }}
+      {% if f.site_name.errors %}<em class="err">{{ f.site_name.errors.0 }}</em>{% endif %}</label>
+    <details class="pl-gw-adv">
+      <summary class="small">Advanced — only if the site doesn't load correctly</summary>
+      <div class="pl-gw-checks">
+        <label><input type="checkbox" name="{{ f.rewrite_html.html_name }}" {% if f.rewrite_html.value %}checked{% endif %}> {{ f.rewrite_html.label }}</label>
+        <label><input type="checkbox" name="{{ f.rewrite_js.html_name }}" {% if f.rewrite_js.value %}checked{% endif %}> {{ f.rewrite_js.label }}</label>
+        <label><input type="checkbox" name="{{ f.isolate_storage.html_name }}" {% if f.isolate_storage.value %}checked{% endif %}> {{ f.isolate_storage.label }}</label>
+        <label><input type="checkbox" name="{{ f.insecure.html_name }}" {% if f.insecure.value %}checked{% endif %}> {{ f.insecure.label }}</label>
+        <label><input type="checkbox" name="{{ f.js_files_only.html_name }}" {% if f.js_files_only.value %}checked{% endif %}> {{ f.js_files_only.label }}</label>
+        <label><input type="checkbox" name="{{ f.script_name.html_name }}" {% if f.script_name.value %}checked{% endif %}> {{ f.script_name.label }}</label>
+      </div>
+      <label class="field"><span>{{ f.mounts.label }} <small class="muted">one per line: /_api = http://host:port — for a frontend that calls its API at a fixed address</small></span>{{ f.mounts }}
+        {% if f.mounts.errors %}<em class="err">{{ f.mounts.errors.0 }}</em>{% endif %}</label>
+      <label class="field"><span>{{ f.replace.label }} <small class="muted">one per line: old text ==> new text — for an address the site builds itself (e.g. a fixed port)</small></span>{{ f.replace }}
+        {% if f.replace.errors %}<em class="err">{{ f.replace.errors.0 }}</em>{% endif %}</label>
+      <label class="field"><span>{{ f.sync_tokens.label }}</span>{{ f.sync_tokens }}
+        {% if f.sync_tokens.errors %}<em class="err">{{ f.sync_tokens.errors.0 }}</em>{% endif %}</label>
+    </details>
+  </div>
+</fieldset>
